@@ -1,6 +1,6 @@
 package cache
 
-// LookupCfg is the LookupCache configuration
+// LookupCfg is the LookupCache configuration.
 type LookupCfg struct {
 	// RegisterLookups is called on init to register lookups
 	// within LookupCache's internal LookupMap
@@ -17,9 +17,9 @@ type LookupCfg struct {
 
 // LookupCache is a cache built on-top of TTLCache, providing multi-key
 // lookups for items in the cache by means of additional lookup maps. These
-// maps simply store addtional keys => original key, with hook-ins to automatically
+// maps simply store additional keys => original key, with hook-ins to automatically
 // call user supplied functions on adding an item, or on updating/deleting an
-// item to keep the LookupMap up-to-date
+// item to keep the LookupMap up-to-date.
 type LookupCache interface {
 	Cache
 
@@ -39,7 +39,7 @@ type lookupTTLCache struct {
 	TTLCache
 }
 
-// NewLookup returns a new initialized LookupCache
+// NewLookup returns a new initialized LookupCache.
 func NewLookup(cfg LookupCfg) LookupCache {
 	switch {
 	case cfg.RegisterLookups == nil:
@@ -128,14 +128,14 @@ func (c *lookupTTLCache) InvalidateBy(lookup string, key string) bool {
 
 // LookupMap is a structure that provides lookups for
 // keys to primary keys under supplied lookup identifiers.
-// This is essentially a wrapper around map[string](map[string]string)
+// This is essentially a wrapper around map[string](map[string]string).
 type LookupMap struct {
 	initd  bool
 	lookup map[string](map[string]string)
 }
 
 // RegisterLookup registers a lookup identifier in the LookupMap,
-// note this can only be doing during the cfg.RegisterLookups() hook
+// note this can only be doing during the cfg.RegisterLookups() hook.
 func (l *LookupMap) RegisterLookup(id string) {
 	if l.initd {
 		panic("cache: cannot register lookup after initialization")
@@ -145,7 +145,7 @@ func (l *LookupMap) RegisterLookup(id string) {
 	l.lookup[id] = make(map[string]string, 100)
 }
 
-// Get fetches an entry's primary key for lookup identifier and key
+// Get fetches an entry's primary key for lookup identifier and key.
 func (l *LookupMap) Get(id string, key string) (string, bool) {
 	keys, ok := l.lookup[id]
 	if !ok {
@@ -155,8 +155,8 @@ func (l *LookupMap) Get(id string, key string) (string, bool) {
 	return origKey, ok
 }
 
-// Set adds a lookup to the LookupMap under supplied lookup identifer,
-// linking supplied key to the supplied primary (original) key
+// Set adds a lookup to the LookupMap under supplied lookup identifier,
+// linking supplied key to the supplied primary (original) key.
 func (l *LookupMap) Set(id string, key string, origKey string) {
 	keys, ok := l.lookup[id]
 	if !ok {
@@ -165,7 +165,7 @@ func (l *LookupMap) Set(id string, key string, origKey string) {
 	keys[key] = origKey
 }
 
-// Has checks if there exists a lookup for supplied identifer and key
+// Has checks if there exists a lookup for supplied identifier and key.
 func (l *LookupMap) Has(id string, key string) bool {
 	keys, ok := l.lookup[id]
 	if !ok {
@@ -175,7 +175,7 @@ func (l *LookupMap) Has(id string, key string) bool {
 	return ok
 }
 
-// Delete removes a lookup from LookupMap with supplied identifer and key
+// Delete removes a lookup from LookupMap with supplied identifier and key.
 func (l *LookupMap) Delete(id string, key string) {
 	keys, ok := l.lookup[id]
 	if !ok {

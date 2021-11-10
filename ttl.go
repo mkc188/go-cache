@@ -1,75 +1,89 @@
 package cache
 
 import (
+	"context"
 	"sync"
 	"time"
 
 	"codeberg.org/gruf/go-nowish"
+	"codeberg.org/gruf/go-runners"
 )
 
-const (
-	// clockPrecision is the precision of the cacheClock
-	clockPrecision = time.Millisecond * 100
-
-	// maxLockAttempts is the max no. attempted mutex locks by the reaper before
-	// enforcing a lock at the next attempt
-	maxLockAttempts = 5
-)
+// clockPrecision is the precision of the cacheClock.
+const clockPrecision = time.Millisecond * 100
 
 var (
-	// caches is the global tracked slice of Cache objects, used by the reaper
-	caches = []*TTLCache{}
-
-	// cacheClock is the cache-entry clock, used for TTL checking
+	// cacheClock is the cache-entry clock, used for TTL checking.
 	cacheClock = nowish.Clock{}
 
-	// globalOnce protects the cacheClock and reaper from multiple attempted starts
-	globalOnce = sync.Once{}
-
-	// globalMutex protects the caches slice
-	globalMutex = sync.Mutex{}
+	// clockOnce protects cacheClock from multiple starts
+	clockOnce = sync.Once{}
 )
 
 // TTLCache is the underlying Cache implementation, providing both the base
 // Cache interface and access to "unsafe" methods so that you may build your
-// customized caches ontop of this structure
+// customized caches ontop of this structure.
 type TTLCache struct {
 	cache   map[string]*entry
-	evict   Hook // the evict hook is called when an item is evicted from the cache, includes manual delete
-	invalid Hook // the invalidate hook is called when an item's data in the cache is invalidated
-	ttl     time.Duration
-	mutex   mutex
+	evict   Hook            // the evict hook is called when an item is evicted from the cache, includes manual delete
+	invalid Hook            // the invalidate hook is called when an item's data in the cache is invalidated
+	ttl     time.Duration   // ttl is the item TTL
+	svc     runners.Service // svc manages running of the cache eviction routine
+	mu      sync.Mutex      // mu protects TTLCache for concurrent access
 }
 
-// Init performs Cache initialization, this MUST be called
+// Init performs Cache initialization, this MUST be called.
 func (c *TTLCache) Init() {
 	// Initialize the cache itself
 	c.cache = make(map[string]*entry, 100)
 	c.evict = emptyHook
 	c.invalid = emptyHook
 	c.ttl = time.Minute * 5
+	clockOnce.Do(func() { cacheClock.Start(clockPrecision) })
+	go c.Start(time.Second * 10)
+}
 
-	// Add to global caches
-	globalMutex.Lock()
-	caches = append(caches, c)
-	globalMutex.Unlock()
+func (c *TTLCache) Start(freq time.Duration) bool {
+	// Nothing to start
+	if freq < 1 {
+		return false
+	}
 
-	// Ensure reaper & clock started
-	globalOnce.Do(func() {
-		cacheClock.Start(clockPrecision)
-		go reaper()
+	// Check freq isn't too close to our unprecise cache clock
+	if freq < 10*clockPrecision {
+		panic("sweep freq too close to clock precision")
+	}
+
+	// Attempt to start the eviction routine
+	return c.svc.Run(func(ctx context.Context) {
+		t := time.NewTimer(freq)
+		for {
+			select {
+			// we got stopped
+			case <-ctx.Done():
+				if !t.Stop() {
+					<-t.C
+				}
+				return
+
+			// next tick
+			case <-t.C:
+				c.sweep()
+				t.Reset(freq)
+			}
+		}
 	})
 }
 
-// sweep attempts to evict expired items (with callback!) from cache
-func (c *TTLCache) sweep() {
-	// Attempt to get cache lock
-	if !c.mutex.AttemptLock() {
-		return
-	}
+func (c *TTLCache) Stop() bool {
+	return c.svc.Stop(nil)
+}
 
-	// Defer in case of hook panic
-	defer c.mutex.Unlock()
+// sweep attempts to evict expired items (with callback!) from cache.
+func (c *TTLCache) sweep() {
+	// Lock and defer unlock (in case of hook panic)
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// Fetch current time for TTL check
 	now := cacheClock.Now()
@@ -83,14 +97,14 @@ func (c *TTLCache) sweep() {
 	}
 }
 
-// Lock locks the cache mutex
+// Lock locks the cache mutex.
 func (c *TTLCache) Lock() {
-	c.mutex.Lock()
+	c.mu.Lock()
 }
 
-// Unlock unlocks the cache mutex
+// Unlock unlocks the cache mutex.
 func (c *TTLCache) Unlock() {
-	c.mutex.Unlock()
+	c.mu.Unlock()
 }
 
 func (c *TTLCache) SetEvictionCallback(hook Hook) {
@@ -149,7 +163,7 @@ func (c *TTLCache) Get(key string) (interface{}, bool) {
 	return value, ok
 }
 
-// GetUnsafe is the mutex-unprotected logic for Cache.Get()
+// GetUnsafe is the mutex-unprotected logic for Cache.Get().
 func (c *TTLCache) GetUnsafe(key string) (interface{}, bool) {
 	item, ok := c.cache[key]
 	if !ok {
@@ -166,7 +180,7 @@ func (c *TTLCache) Put(key string, value interface{}) bool {
 	return success
 }
 
-// PutUnsafe is the mutex-unprotected logic for Cache.Put()
+// PutUnsafe is the mutex-unprotected logic for Cache.Put().
 func (c *TTLCache) PutUnsafe(key string, value interface{}) bool {
 	// If already cached, return
 	if _, ok := c.cache[key]; ok {
@@ -188,7 +202,7 @@ func (c *TTLCache) Set(key string, value interface{}) {
 	c.SetUnsafe(key, value)
 }
 
-// SetUnsafe is the mutex-unprotected logic for Cache.Set(), it calls externally-set functions
+// SetUnsafe is the mutex-unprotected logic for Cache.Set(), it calls externally-set functions.
 func (c *TTLCache) SetUnsafe(key string, value interface{}) {
 	item, ok := c.cache[key]
 	if ok {
@@ -212,7 +226,7 @@ func (c *TTLCache) Has(key string) bool {
 	return ok
 }
 
-// HasUnsafe is the mutex-unprotected logic for Cache.Has()
+// HasUnsafe is the mutex-unprotected logic for Cache.Has().
 func (c *TTLCache) HasUnsafe(key string) bool {
 	_, ok := c.cache[key]
 	return ok
@@ -224,7 +238,7 @@ func (c *TTLCache) Invalidate(key string) bool {
 	return c.InvalidateUnsafe(key)
 }
 
-// InvalidateUnsafe is mutex-unprotected logic for Cache.Invalidate()
+// InvalidateUnsafe is mutex-unprotected logic for Cache.Invalidate().
 func (c *TTLCache) InvalidateUnsafe(key string) bool {
 	// Check if we have item with key
 	item, ok := c.cache[key]
@@ -244,7 +258,7 @@ func (c *TTLCache) Clear() {
 	c.ClearUnsafe()
 }
 
-// ClearUnsafe is mutex-unprotected logic for Cache.Clean()
+// ClearUnsafe is mutex-unprotected logic for Cache.Clean().
 func (c *TTLCache) ClearUnsafe() {
 	for key, item := range c.cache {
 		c.invalid(key, item.value)
@@ -259,13 +273,13 @@ func (c *TTLCache) Size() int {
 	return sz
 }
 
-// SizeUnsafe is mutex unprotected logic for Cache.Size()
+// SizeUnsafe is mutex unprotected logic for Cache.Size().
 func (c *TTLCache) SizeUnsafe() int {
 	return len(c.cache)
 }
 
 // entry represents an item in the cache, with
-// it's currently calculated expiry time
+// it's currently calculated expiry time.
 type entry struct {
 	value  interface{}
 	expiry time.Time

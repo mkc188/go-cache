@@ -4,8 +4,17 @@ import "time"
 
 // Cache represents a TTL cache with customizable callbacks, it
 // exists here to abstract away the "unsafe" methods in the case that
-// you do not want your own implementation atop TTLCache{}
+// you do not want your own implementation atop TTLCache{}.
 type Cache interface {
+	// Start will start the cache background eviction routine with given sweep frequency.
+	// If already running or a freq <= 0 provided, this is a no-op. This will block until
+	// the eviction routine has stopped, or return immediately in case of no-op
+	Start(freq time.Duration) bool
+
+	// Stop will stop cache background eviction routine. If not running this is a no-op. This
+	// will block until the eviction routine has been successfully stopped
+	Stop() bool
+
 	// SetEvictionCallback sets the eviction callback to the provided hook
 	SetEvictionCallback(hook Hook)
 
@@ -41,7 +50,7 @@ type Cache interface {
 	Size() int
 }
 
-// New returns a new initialized Cache
+// New returns a new initialized Cache.
 func New() Cache {
 	c := TTLCache{}
 	c.Init()

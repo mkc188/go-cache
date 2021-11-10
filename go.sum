@@ -1,5 +1,7 @@
 codeberg.org/gruf/go-nowish v1.0.0 h1:GH34FvmxLjlKhKErmYpCNpyCDJyfLc3tAAJa5ol+jcM=
 codeberg.org/gruf/go-nowish v1.0.0/go.mod h1:70nvICNcqQ9OHpF07N614Dyk7cpL5ToWU1K1ZVCec2s=
+codeberg.org/gruf/go-runners v1.0.0 h1:eoXIxUXPdUVs7lgrb7K0kucMpVC0VUBvFYs/VCupI1w=
+codeberg.org/gruf/go-runners v1.0.0/go.mod h1:9gTrmMnO3d+50C+hVzcmGBf+zTuswReS278E2EMvnmw=
 github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
 github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
