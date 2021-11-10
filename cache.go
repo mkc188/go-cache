@@ -8,11 +8,11 @@ import "time"
 type Cache interface {
 	// Start will start the cache background eviction routine with given sweep frequency.
 	// If already running or a freq <= 0 provided, this is a no-op. This will block until
-	// the eviction routine has stopped, or return immediately in case of no-op
+	// the eviction routine has started
 	Start(freq time.Duration) bool
 
 	// Stop will stop cache background eviction routine. If not running this is a no-op. This
-	// will block until the eviction routine has been successfully stopped
+	// will block until the eviction routine has stopped
 	Stop() bool
 
 	// SetEvictionCallback sets the eviction callback to the provided hook

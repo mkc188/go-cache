@@ -119,6 +119,14 @@ func TestLookupCache(t *testing.T) {
 	})
 	c.SetTTL(time.Second*5, false)
 
+	// Ensure we can start and stop it
+	if !c.Stop() {
+		t.Fatal("failed to stop cache eviction routine")
+	}
+	if !c.Start(time.Second * 10) {
+		t.Fatal("failed to start cache eviction routine")
+	}
+
 	done := make(chan struct{})
 	go func() {
 		for {

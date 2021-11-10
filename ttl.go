@@ -39,8 +39,8 @@ func (c *TTLCache) Init() {
 	c.evict = emptyHook
 	c.invalid = emptyHook
 	c.ttl = time.Minute * 5
+	c.Start(time.Second * 10)
 	clockOnce.Do(func() { cacheClock.Start(clockPrecision) })
-	go c.Start(time.Second * 10)
 }
 
 func (c *TTLCache) Start(freq time.Duration) bool {
@@ -54,29 +54,51 @@ func (c *TTLCache) Start(freq time.Duration) bool {
 		panic("sweep freq too close to clock precision")
 	}
 
-	// Attempt to start the eviction routine
-	return c.svc.Run(func(ctx context.Context) {
-		t := time.NewTimer(freq)
-		for {
-			select {
-			// we got stopped
-			case <-ctx.Done():
-				if !t.Stop() {
-					<-t.C
-				}
-				return
+	// Track state of starting
+	done := make(chan struct{})
+	started := false
 
-			// next tick
-			case <-t.C:
-				c.sweep()
-				t.Reset(freq)
-			}
+	go func() {
+		ran := c.svc.Run(func(ctx context.Context) {
+			// Successfully started
+			started = true
+			close(done)
+
+			// start routine
+			c.run(ctx, freq)
+		})
+
+		// failed to start
+		if !ran {
+			close(done)
 		}
-	})
+	}()
+
+	<-done
+	return started
 }
 
 func (c *TTLCache) Stop() bool {
 	return c.svc.Stop(nil)
+}
+
+func (c *TTLCache) run(ctx context.Context, freq time.Duration) {
+	t := time.NewTimer(freq)
+	for {
+		select {
+		// we got stopped
+		case <-ctx.Done():
+			if !t.Stop() {
+				<-t.C
+			}
+			return
+
+		// next tick
+		case <-t.C:
+			c.sweep()
+			t.Reset(freq)
+		}
+	}
 }
 
 // sweep attempts to evict expired items (with callback!) from cache.
