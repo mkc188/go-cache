@@ -79,7 +79,7 @@ func (c *TTLCache) Start(freq time.Duration) bool {
 }
 
 func (c *TTLCache) Stop() bool {
-	return c.svc.Stop(nil)
+	return c.svc.Stop()
 }
 
 func (c *TTLCache) run(ctx context.Context, freq time.Duration) {
