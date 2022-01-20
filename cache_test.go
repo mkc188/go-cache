@@ -18,14 +18,14 @@ var testEntries = map[string]interface{}{
 	"c":     []string{"a", "b", "c"},
 	"map":   map[string]string{"a": "a"},
 	"iface": interface{}(nil),
-	"weird": unsafe.Pointer(&cache.TTLCache{}),
+	"weird": unsafe.Pointer(&cache.TTLCache[string, string]{}),
 	"float": 2.4,
 	"url":   url.URL{},
 }
 
 func TestCache(t *testing.T) {
 	// Prepare cache
-	c := cache.New()
+	c := cache.New[string, interface{}]()
 	c.SetTTL(time.Second*5, false)
 
 	// Ensure we can start and stop it

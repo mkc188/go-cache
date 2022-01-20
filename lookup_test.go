@@ -92,19 +92,19 @@ var testLookupEntries = []*testEntry{
 
 func TestLookupCache(t *testing.T) {
 	// Prepare cache
-	c := cache.NewLookup(cache.LookupCfg{
-		RegisterLookups: func(lm *cache.LookupMap) {
+	c := cache.NewLookup(cache.LookupCfg[string, interface{}, interface{}]{
+		RegisterLookups: func(lm *cache.LookupMap[string, interface{}]) {
 			lm.RegisterLookup("key2")
 			lm.RegisterLookup("key3")
 			lm.RegisterLookup("key4")
 		},
-		AddLookups: func(lm *cache.LookupMap, i interface{}) {
+		AddLookups: func(lm *cache.LookupMap[string, interface{}], i interface{}) {
 			e := i.(*testEntry)
 			lm.Set("key2", e.Key2, e.Key1)
 			lm.Set("key3", e.Key3, e.Key1)
 			lm.Set("key4", e.Key4, e.Key1)
 		},
-		DeleteLookups: func(lm *cache.LookupMap, i interface{}) {
+		DeleteLookups: func(lm *cache.LookupMap[string, interface{}], i interface{}) {
 			e := i.(*testEntry)
 			if e.Key2 != "" {
 				lm.Delete("key2", e.Key2)

@@ -1,6 +1,6 @@
 module codeberg.org/gruf/go-cache
 
-go 1.17
+go 1.18
 
 require (
 	codeberg.org/gruf/go-nowish v1.0.0
