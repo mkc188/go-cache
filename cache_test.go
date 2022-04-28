@@ -25,7 +25,7 @@ var testEntries = map[string]interface{}{
 
 func TestCache(t *testing.T) {
 	// Prepare cache
-	c := cache.New[string, *cache.Iface]()
+	c := cache.New[string, interface{}]()
 	c.SetTTL(time.Second*5, false)
 
 	// Ensure we can start and stop it
@@ -51,15 +51,15 @@ func TestCache(t *testing.T) {
 	}()
 
 	// Track callbacks set
-	callbacks := map[string]*cache.Iface{}
-	c.SetInvalidateCallback(func(key string, value *cache.Iface) {
+	callbacks := map[string]interface{}{}
+	c.SetInvalidateCallback(func(key string, value interface{}) {
 		callbacks[key] = value
 	})
 
 	// Add all entries to cache
 	for key, val := range testEntries {
 		t.Logf("Cache.Put(%s, %v)", key, val)
-		c.Put(key, cache.ToIface(val))
+		c.Put(key, val)
 	}
 
 	// Ensure all entries are expected
@@ -68,17 +68,18 @@ func TestCache(t *testing.T) {
 		t.Logf("Cache.Get() => %s, %v", key, val)
 		if !ok {
 			t.Fatalf("key unexpectedly not found in cache: %s", key)
-		} else if !cmp.Equal(val, check.Interface()) {
+		} else if !cmp.Equal(val, check) {
 			t.Fatalf("value not as expected for key in cache: %s", key)
 		}
 	}
 
-	// Update entries in cache to ensure callback
-	for key := range testEntries {
-		t.Logf("Cache.Set(%s, %v)", key, nil)
-		c.Set(key, nil)
-		if _, ok := callbacks[key]; !ok {
-			t.Fatalf("invalidate callback unexpectedly not called for: %s", key)
+	// Update entries via CAS to ensure callback
+	for key, val := range testEntries {
+		t.Logf("Cache.CAS(%s, %v, nil)", key, val)
+		if !c.CAS(key, val, nil) && val != nil {
+			t.Fatalf("CAS failed for: %s", key)
+		} else if _, ok := callbacks[key]; !ok {
+			t.Fatalf("invalidate callback not called for: %s", key)
 		}
 	}
 
@@ -88,13 +89,13 @@ func TestCache(t *testing.T) {
 		t.Logf("Cache.Get() => %s, %v", key, check)
 		if !ok {
 			t.Fatalf("key unexpectedly not found in cache: %s", key)
-		} else if !check.Nil() {
+		} else if check != nil {
 			t.Fatalf("value not as expected after update for key in cache: %s", key)
 		}
 	}
 
 	// Clear callbacks, force invalidate and recheck
-	callbacks = map[string]*cache.Iface{}
+	callbacks = map[string]interface{}{}
 	for key := range testEntries {
 		t.Logf("Cache.Invalidate(%s)", key)
 		c.Invalidate(key)

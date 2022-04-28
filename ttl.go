@@ -11,7 +11,7 @@ import (
 // TTLCache is the underlying Cache implementation, providing both the base
 // Cache interface and access to "unsafe" methods so that you may build your
 // customized caches ontop of this structure.
-type TTLCache[Key, Value comparable] struct {
+type TTLCache[Key comparable, Value any] struct {
 	cache   map[Key](*entry[Value])
 	evict   Hook[Key, Value] // the evict hook is called when an item is evicted from the cache, includes manual delete
 	invalid Hook[Key, Value] // the invalidate hook is called when an item's data in the cache is invalidated
@@ -216,7 +216,7 @@ func (c *TTLCache[K, V]) SetUnsafe(key K, value V) {
 
 func (c *TTLCache[K, V]) CAS(key K, cmp V, swp V) bool {
 	c.Lock()
-	ok := c.HasUnsafe(key)
+	ok := c.CASUnsafe(key, cmp, swp)
 	c.Unlock()
 	return ok
 }
@@ -225,7 +225,7 @@ func (c *TTLCache[K, V]) CAS(key K, cmp V, swp V) bool {
 func (c *TTLCache[K, V]) CASUnsafe(key K, cmp V, swp V) bool {
 	// Check for item
 	item, ok := c.cache[key]
-	if !ok || item.value != cmp {
+	if !ok || !Compare(item.value, cmp) {
 		return false
 	}
 

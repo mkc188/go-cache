@@ -92,20 +92,20 @@ var testLookupEntries = []*testEntry{
 
 func TestLookupCache(t *testing.T) {
 	// Prepare cache
-	c := cache.NewLookup(cache.LookupCfg[string, string, *cache.Iface]{
+	c := cache.NewLookup(cache.LookupCfg[string, string, interface{}]{
 		RegisterLookups: func(lm *cache.LookupMap[string, string]) {
 			lm.RegisterLookup("key2")
 			lm.RegisterLookup("key3")
 			lm.RegisterLookup("key4")
 		},
-		AddLookups: func(lm *cache.LookupMap[string, string], i *cache.Iface) {
-			e := i.Interface().(*testEntry)
+		AddLookups: func(lm *cache.LookupMap[string, string], i interface{}) {
+			e := i.(*testEntry)
 			lm.Set("key2", e.Key2, e.Key1)
 			lm.Set("key3", e.Key3, e.Key1)
 			lm.Set("key4", e.Key4, e.Key1)
 		},
-		DeleteLookups: func(lm *cache.LookupMap[string, string], i *cache.Iface) {
-			e := i.Interface().(*testEntry)
+		DeleteLookups: func(lm *cache.LookupMap[string, string], i interface{}) {
+			e := i.(*testEntry)
 			if e.Key2 != "" {
 				lm.Delete("key2", e.Key2)
 			}
@@ -145,15 +145,15 @@ func TestLookupCache(t *testing.T) {
 	}()
 
 	// Track callbacks set
-	callbacks := map[string]*cache.Iface{}
-	c.SetInvalidateCallback(func(key string, value *cache.Iface) {
+	callbacks := map[string]interface{}{}
+	c.SetInvalidateCallback(func(key string, value interface{}) {
 		callbacks[key] = value
 	})
 
 	// Add all entries to cache
 	for _, val := range testLookupEntries {
 		t.Logf("Cache.Put(%v)", val)
-		c.Put(val.Key1, cache.ToIface(val))
+		c.Put(val.Key1, val)
 	}
 
 	// Ensure all entries are expected
@@ -162,7 +162,7 @@ func TestLookupCache(t *testing.T) {
 		t.Logf("Cache.Get() => %v", val)
 		if !ok {
 			t.Fatalf("key unexpectedly not found in cache: %s", val.Key1)
-		} else if !cmp.Equal(val, check.Interface()) {
+		} else if !cmp.Equal(val, check) {
 			t.Fatalf("value not as expected for key in cache: %s", val.Key1)
 		}
 	}

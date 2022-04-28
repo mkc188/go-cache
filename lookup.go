@@ -1,7 +1,7 @@
 package cache
 
 // LookupCfg is the LookupCache configuration.
-type LookupCfg[OGKey, AltKey, Value comparable] struct {
+type LookupCfg[OGKey, AltKey comparable, Value any] struct {
 	// RegisterLookups is called on init to register lookups
 	// within LookupCache's internal LookupMap
 	RegisterLookups func(*LookupMap[OGKey, AltKey])
@@ -20,7 +20,7 @@ type LookupCfg[OGKey, AltKey, Value comparable] struct {
 // maps simply store additional keys => original key, with hook-ins to automatically
 // call user supplied functions on adding an item, or on updating/deleting an
 // item to keep the LookupMap up-to-date.
-type LookupCache[OGKey, AltKey, Value comparable] interface {
+type LookupCache[OGKey, AltKey comparable, Value any] interface {
 	Cache[OGKey, Value]
 
 	// GetBy fetches a cached value by supplied lookup identifier and key
@@ -39,14 +39,14 @@ type LookupCache[OGKey, AltKey, Value comparable] interface {
 	InvalidateBy(lookup string, key AltKey) bool
 }
 
-type lookupTTLCache[OK, AK, V comparable] struct {
+type lookupTTLCache[OK, AK comparable, V any] struct {
 	config LookupCfg[OK, AK, V]
 	lookup LookupMap[OK, AK]
 	TTLCache[OK, V]
 }
 
 // NewLookup returns a new initialized LookupCache.
-func NewLookup[OK, AK, V comparable](cfg LookupCfg[OK, AK, V]) LookupCache[OK, AK, V] {
+func NewLookup[OK, AK comparable, V any](cfg LookupCfg[OK, AK, V]) LookupCache[OK, AK, V] {
 	switch {
 	case cfg.RegisterLookups == nil:
 		panic("cache: nil lookups register function")
