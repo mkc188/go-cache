@@ -1,4 +1,4 @@
-module codeberg.org/gruf/go-cache
+module codeberg.org/gruf/go-cache/v2
 
 go 1.18
 

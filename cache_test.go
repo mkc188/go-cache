@@ -6,7 +6,7 @@ import (
 	"time"
 	"unsafe"
 
-	"codeberg.org/gruf/go-cache"
+	"codeberg.org/gruf/go-cache/v2"
 	"github.com/google/go-cmp/cmp"
 )
 
