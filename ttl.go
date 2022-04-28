@@ -5,53 +5,33 @@ import (
 	"sync"
 	"time"
 
-	"codeberg.org/gruf/go-nowish"
 	"codeberg.org/gruf/go-runners"
-)
-
-// clockPrecision is the precision of the cacheClock.
-const clockPrecision = time.Millisecond * 100
-
-var (
-	// cacheClock is the cache-entry clock, used for TTL checking.
-	cacheClock = nowish.Clock{}
-
-	// clockOnce protects cacheClock from multiple starts
-	clockOnce = sync.Once{}
 )
 
 // TTLCache is the underlying Cache implementation, providing both the base
 // Cache interface and access to "unsafe" methods so that you may build your
 // customized caches ontop of this structure.
-type TTLCache[K, V comparable] struct {
-	cache   map[K](*entry[V])
-	evict   Hook[K, V]      // the evict hook is called when an item is evicted from the cache, includes manual delete
-	invalid Hook[K, V]      // the invalidate hook is called when an item's data in the cache is invalidated
-	ttl     time.Duration   // ttl is the item TTL
-	svc     runners.Service // svc manages running of the cache eviction routine
-	mu      sync.Mutex      // mu protects TTLCache for concurrent access
+type TTLCache[Key, Value comparable] struct {
+	cache   map[Key](*entry[Value])
+	evict   Hook[Key, Value] // the evict hook is called when an item is evicted from the cache, includes manual delete
+	invalid Hook[Key, Value] // the invalidate hook is called when an item's data in the cache is invalidated
+	ttl     time.Duration    // ttl is the item TTL
+	svc     runners.Service  // svc manages running of the cache eviction routine
+	mu      sync.Mutex       // mu protects TTLCache for concurrent access
 }
 
 // Init performs Cache initialization, this MUST be called.
 func (c *TTLCache[K, V]) Init() {
-	// Initialize the cache itself
 	c.cache = make(map[K](*entry[V]), 100)
 	c.evict = emptyHook[K, V]
 	c.invalid = emptyHook[K, V]
 	c.ttl = time.Minute * 5
-	c.Start(time.Second * 10)
-	clockOnce.Do(func() { cacheClock.Start(clockPrecision) })
 }
 
 func (c *TTLCache[K, V]) Start(freq time.Duration) bool {
 	// Nothing to start
-	if freq < 1 {
+	if freq <= 0 {
 		return false
-	}
-
-	// Check freq isn't too close to our unprecise cache clock
-	if freq < 10*clockPrecision {
-		panic("sweep freq too close to clock precision")
 	}
 
 	// Track state of starting
@@ -108,7 +88,7 @@ func (c *TTLCache[K, V]) sweep() {
 	defer c.mu.Unlock()
 
 	// Fetch current time for TTL check
-	now := cacheClock.Now()
+	now := time.Now()
 
 	// Sweep the cache for old items!
 	for key, item := range c.cache {
@@ -154,14 +134,6 @@ func (c *TTLCache[K, V]) SetInvalidateCallback(hook Hook[K, V]) {
 }
 
 func (c *TTLCache[K, V]) SetTTL(ttl time.Duration, update bool) {
-	if ttl < clockPrecision*10 && ttl > 0 {
-		// A zero TTL means nothing expires,
-		// but other small values we check to
-		// ensure they won't be lost by our
-		// unprecise cache clock
-		panic("ttl too close to cache clock precision")
-	}
-
 	// Safely update TTL
 	c.Lock()
 	diff := ttl - c.ttl
@@ -192,7 +164,7 @@ func (c *TTLCache[K, V]) GetUnsafe(key K) (V, bool) {
 		var value V
 		return value, false
 	}
-	item.expiry = cacheClock.Now().Add(c.ttl)
+	item.expiry = time.Now().Add(c.ttl)
 	return item.value, true
 }
 
@@ -213,7 +185,7 @@ func (c *TTLCache[K, V]) PutUnsafe(key K, value V) bool {
 	// Create new cached item
 	c.cache[key] = &entry[V]{
 		value:  value,
-		expiry: cacheClock.Now().Add(c.ttl),
+		expiry: time.Now().Add(c.ttl),
 	}
 
 	return true
@@ -239,7 +211,7 @@ func (c *TTLCache[K, V]) SetUnsafe(key K, value V) {
 
 	// Update the item + expiry
 	item.value = value
-	item.expiry = cacheClock.Now().Add(c.ttl)
+	item.expiry = time.Now().Add(c.ttl)
 }
 
 func (c *TTLCache[K, V]) CAS(key K, cmp V, swp V) bool {
@@ -262,7 +234,7 @@ func (c *TTLCache[K, V]) CASUnsafe(key K, cmp V, swp V) bool {
 
 	// Update item + expiry
 	item.value = swp
-	item.expiry = cacheClock.Now().Add(c.ttl)
+	item.expiry = time.Now().Add(c.ttl)
 
 	return ok
 }
@@ -289,7 +261,7 @@ func (c *TTLCache[K, V]) SwapUnsafe(key K, swp V) V {
 
 	// update item + expiry
 	item.value = swp
-	item.expiry = cacheClock.Now().Add(c.ttl)
+	item.expiry = time.Now().Add(c.ttl)
 
 	return old
 }

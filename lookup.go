@@ -1,18 +1,18 @@
 package cache
 
 // LookupCfg is the LookupCache configuration.
-type LookupCfg[OK, AK, V comparable] struct {
+type LookupCfg[OGKey, AltKey, Value comparable] struct {
 	// RegisterLookups is called on init to register lookups
 	// within LookupCache's internal LookupMap
-	RegisterLookups func(*LookupMap[OK, AK])
+	RegisterLookups func(*LookupMap[OGKey, AltKey])
 
 	// AddLookups is called on each addition to the cache, to
 	// set any required additional key lookups for supplied item
-	AddLookups func(*LookupMap[OK, AK], V)
+	AddLookups func(*LookupMap[OGKey, AltKey], Value)
 
 	// DeleteLookups is called on each eviction/invalidation of
 	// an item in the cache, to remove any unused key lookups
-	DeleteLookups func(*LookupMap[OK, AK], V)
+	DeleteLookups func(*LookupMap[OGKey, AltKey], Value)
 }
 
 // LookupCache is a cache built on-top of TTLCache, providing multi-key
@@ -20,23 +20,23 @@ type LookupCfg[OK, AK, V comparable] struct {
 // maps simply store additional keys => original key, with hook-ins to automatically
 // call user supplied functions on adding an item, or on updating/deleting an
 // item to keep the LookupMap up-to-date.
-type LookupCache[OK, AK, V comparable] interface {
-	Cache[OK, V]
+type LookupCache[OGKey, AltKey, Value comparable] interface {
+	Cache[OGKey, Value]
 
 	// GetBy fetches a cached value by supplied lookup identifier and key
-	GetBy(lookup string, key AK) (value V, ok bool)
+	GetBy(lookup string, key AltKey) (value Value, ok bool)
 
-	// CASBy
-	CASBy(lookup string, key AK, cmp, swp V) bool
+	// CASBy will attempt to perform a CAS operation on supplied lookup identifier and key
+	CASBy(lookup string, key AltKey, cmp, swp Value) bool
 
-	// SwapBy
-	SwapBy(lookup string, key AK, swp V) V
+	// SwapBy will attempt to perform a swap operation on supplied lookup identifier and key
+	SwapBy(lookup string, key AltKey, swp Value) Value
 
 	// HasBy checks if a value is cached under supplied lookup identifier and key
-	HasBy(lookup string, key AK) bool
+	HasBy(lookup string, key AltKey) bool
 
 	// InvalidateBy invalidates a value by supplied lookup identifier and key
-	InvalidateBy(lookup string, key AK) bool
+	InvalidateBy(lookup string, key AltKey) bool
 }
 
 type lookupTTLCache[OK, AK, V comparable] struct {

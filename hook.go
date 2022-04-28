@@ -1,6 +1,6 @@
 package cache
 
 // Hook defines a function hook that can be supplied as a callback.
-type Hook[K, V comparable] func(key K, value V)
+type Hook[Key comparable, Value any] func(key Key, value Value)
 
-func emptyHook[K, V comparable](K, V) {}
+func emptyHook[K comparable, V any](K, V) {}

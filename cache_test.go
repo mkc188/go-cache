@@ -25,13 +25,10 @@ var testEntries = map[string]interface{}{
 
 func TestCache(t *testing.T) {
 	// Prepare cache
-	c := cache.New[string, interface{}]()
+	c := cache.New[string, *cache.Iface]()
 	c.SetTTL(time.Second*5, false)
 
 	// Ensure we can start and stop it
-	if !c.Stop() {
-		t.Fatal("failed to stop cache eviction routine")
-	}
 	if !c.Start(time.Second * 10) {
 		t.Fatal("failed to start cache eviction routine")
 	}
@@ -54,15 +51,15 @@ func TestCache(t *testing.T) {
 	}()
 
 	// Track callbacks set
-	callbacks := map[string]interface{}{}
-	c.SetInvalidateCallback(func(key string, value interface{}) {
+	callbacks := map[string]*cache.Iface{}
+	c.SetInvalidateCallback(func(key string, value *cache.Iface) {
 		callbacks[key] = value
 	})
 
 	// Add all entries to cache
 	for key, val := range testEntries {
 		t.Logf("Cache.Put(%s, %v)", key, val)
-		c.Put(key, val)
+		c.Put(key, cache.ToIface(val))
 	}
 
 	// Ensure all entries are expected
@@ -71,7 +68,7 @@ func TestCache(t *testing.T) {
 		t.Logf("Cache.Get() => %s, %v", key, val)
 		if !ok {
 			t.Fatalf("key unexpectedly not found in cache: %s", key)
-		} else if !cmp.Equal(val, check) {
+		} else if !cmp.Equal(val, check.Interface()) {
 			t.Fatalf("value not as expected for key in cache: %s", key)
 		}
 	}
@@ -91,14 +88,14 @@ func TestCache(t *testing.T) {
 		t.Logf("Cache.Get() => %s, %v", key, check)
 		if !ok {
 			t.Fatalf("key unexpectedly not found in cache: %s", key)
-		} else if check != nil {
+		} else if !check.Nil() {
 			t.Fatalf("value not as expected after update for key in cache: %s", key)
 		}
 	}
 
 	// Clear callbacks, force invalidate and recheck
-	callbacks = map[string]interface{}{}
-	for key, _ := range testEntries {
+	callbacks = map[string]*cache.Iface{}
+	for key := range testEntries {
 		t.Logf("Cache.Invalidate(%s)", key)
 		c.Invalidate(key)
 		if _, ok := callbacks[key]; !ok {
