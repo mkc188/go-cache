@@ -3,7 +3,7 @@ module codeberg.org/gruf/go-cache/v2
 go 1.18
 
 require (
-	codeberg.org/gruf/go-sched v1.0.0
+	codeberg.org/gruf/go-sched v1.0.1
 	github.com/google/go-cmp v0.5.6
 )
 
