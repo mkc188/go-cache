@@ -7,10 +7,10 @@ codeberg.org/gruf/go-bytes v1.0.2/go.mod h1:1v/ibfaosfXSZtRdW2rWaVrDXMc9E3bsi/M9
 codeberg.org/gruf/go-byteutil v1.0.2 h1:OesVyK5VKWeWdeDR00zRJ+Oy8hjXx1pBhn7WVvcZWVE=
 codeberg.org/gruf/go-byteutil v1.0.2/go.mod h1:cWM3tgMCroSzqoBXUXMhvxTxYJp+TbCr6ioISRY5vSU=
 codeberg.org/gruf/go-errors/v2 v2.0.0/go.mod h1:ZRhbdhvgoUA3Yw6e56kd9Ox984RrvbEFC2pOXyHDJP4=
-codeberg.org/gruf/go-runners v1.2.2 h1:o0u8ggAeT5j8R0oaND961OeWEZOzW9wqwhmnVEeteqs=
-codeberg.org/gruf/go-runners v1.2.2/go.mod h1:rl0EdZNozkRMb21DAtOL5L4oTfmslYQdZgq2RMMc/H4=
-codeberg.org/gruf/go-sched v1.1.0 h1:vb1L8XuMhVN7qQJRbynjQF1W8C1UAyz1ZhUub1tvia8=
-codeberg.org/gruf/go-sched v1.1.0/go.mod h1:aCUfiZtGdYxrwfuzjjEiU0KFucvQVn2lAbpI93DBuEg=
+codeberg.org/gruf/go-runners v1.3.0 h1:ZhJ3pFivyZgM/JfKTIc312rI/XUiIfLheDB1mFPRTEk=
+codeberg.org/gruf/go-runners v1.3.0/go.mod h1:rl0EdZNozkRMb21DAtOL5L4oTfmslYQdZgq2RMMc/H4=
+codeberg.org/gruf/go-sched v1.1.1 h1:YtLSQhpypzuD3HTup5oF7LLWB79gTL4nqW06kH4Vwks=
+codeberg.org/gruf/go-sched v1.1.1/go.mod h1:SRcdP/5qim+EBT3n3r4aUra1C30yPqV4OJOXuqvgdQM=
 github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
 github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
