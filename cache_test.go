@@ -6,7 +6,7 @@ import (
 	"time"
 	"unsafe"
 
-	"codeberg.org/gruf/go-cache/v2"
+	"codeberg.org/gruf/go-cache/v3"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -25,7 +25,7 @@ var testEntries = map[string]interface{}{
 
 func TestCache(t *testing.T) {
 	// Prepare cache
-	c := cache.New[string, interface{}]()
+	c := cache.New[string, interface{}](10)
 	c.SetTTL(time.Second*5, false)
 
 	// Ensure we can start and stop it

@@ -16,10 +16,10 @@ type Cache[Key comparable, Value any] interface {
 	Stop() bool
 
 	// SetEvictionCallback sets the eviction callback to the provided hook
-	SetEvictionCallback(hook Hook[Key, Value])
+	SetEvictionCallback(hook func(Key, Value))
 
 	// SetInvalidateCallback sets the invalidate callback to the provided hook
-	SetInvalidateCallback(hook Hook[Key, Value])
+	SetInvalidateCallback(hook func(Key, Value))
 
 	// SetTTL sets the cache item TTL. Update can be specified to force updates of existing items in
 	// the cache, this will simply add the change in TTL to their current expiry time
@@ -60,8 +60,17 @@ type Cache[Key comparable, Value any] interface {
 }
 
 // New returns a new initialized Cache.
-func New[K comparable, V any]() Cache[K, V] {
-	c := &TTLCache[K, V]{}
-	c.Init()
-	return c
+func New[K comparable, V any](sz int) Cache[K, V] {
+	if sz <= 0 {
+		// Set default map start sz
+		sz = 100
+	}
+
+	// Return initialized cache
+	return &TTLCache[K, V]{
+		TTL:     time.Minute * 5,
+		Evict:   func(K, V) {},
+		Invalid: func(K, V) {},
+		Cache:   make(map[K]*Entry[V], sz),
+	}
 }
