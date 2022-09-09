@@ -2,6 +2,7 @@ package fancycache
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/bits"
 	"net"
 	"net/netip"
@@ -246,8 +247,8 @@ func loadSimple(a any) (encoder_iface, bool) {
 			return encode_addr(buf, *ptr)
 		}, true
 
-	// fmt.Stringer types
-	case interface{ String() string }:
+	// Interface types
+	case fmt.Stringer:
 		return encode_stringer, true
 
 	default:
@@ -368,14 +369,6 @@ func encode_string(buf []byte, a any) []byte {
 	return append(buf, *(*string)(iface_value(a))...)
 }
 
-func encode_stringer(buf []byte, a any) []byte {
-	str := *(*interface{ String() string })(iface_value(a))
-	if str == nil {
-		return buf
-	}
-	return encode_string(buf, str.String())
-}
-
 func encode_bool(buf []byte, a any) []byte {
 	if *(*bool)(iface_value(a)) {
 		return append(buf, '1')
@@ -450,6 +443,14 @@ func encode_ip(buf []byte, a any) []byte {
 func encode_addr(buf []byte, a any) []byte {
 	addr := *(*netip.Addr)(iface_value(a))
 	return append(buf, addr.AsSlice()...)
+}
+
+func encode_stringer(buf []byte, a any) []byte {
+	v := *(*fmt.Stringer)(iface_value(a))
+	if v == nil {
+		return buf
+	}
+	return encode_string(buf, v.String())
 }
 
 // deref_ptr_iface wraps an iface encoder to fully dereference the passed reflected value.
