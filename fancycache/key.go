@@ -1,7 +1,6 @@
 package fancycache
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -9,7 +8,6 @@ import (
 	"unicode/utf8"
 
 	"codeberg.org/gruf/go-byteutil"
-	"github.com/kelindar/binary"
 )
 
 // structKeys provides convience methods for a list
@@ -28,35 +26,35 @@ func (sk structKeys) get(prefix string) *keyFields {
 
 // generate will calculate the value string for each required
 // cache key as laid-out by the receiving structKeys{}.
-func (sk structKeys) generate(v any) []cacheKey {
+func (sk structKeys) generate(a any) []cacheKey {
 	// Get reflected value in order
 	// to access the struct fields
-	rv := reflect.ValueOf(v)
+	v := reflect.ValueOf(a)
 
 	// Iteratively deref pointer value
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-		if rv.IsZero() {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
 			panic("nil ptr")
 		}
+		v = v.Elem()
 	}
 
 	// Preallocate expected slice of keys
 	keys := make([]cacheKey, len(sk))
 
-	// Acquire binary encoder
-	enc := encpool.Get().(*encoder)
-	defer encpool.Put(enc)
+	// Acquire byte buffer
+	buf := bufpool.Get().(*byteutil.Buffer)
+	defer bufpool.Put(buf)
 
 	for i := range sk {
-		// Reset encoder
-		enc.Reset()
+		// Reset buffer
+		buf.B = buf.B[:0]
 
 		// Set the key-fields reference
 		keys[i].fields = &sk[i]
 
 		// Calculate cache-key value
-		keys[i].populate(enc, rv)
+		keys[i].populate(buf, v)
 	}
 
 	return keys
@@ -76,20 +74,24 @@ type cacheKey struct {
 
 // populate will calculate the cache key's value string for given
 // value's reflected information. Passed encoder is for string building.
-func (k *cacheKey) populate(enc *encoder, v reflect.Value) {
+func (k *cacheKey) populate(buf *byteutil.Buffer, v reflect.Value) {
 	// Append precalculated prefix
-	enc.AppendString(k.fields.prefix)
-	enc.AppendByte('.')
+	buf.B = append(buf.B, k.fields.prefix...)
+	buf.B = append(buf.B, '.')
 
 	// Append each field value to buffer.
 	for _, idx := range k.fields.fields {
 		fv := v.Field(idx)
 		fi := fv.Interface()
-		enc.Encode(fi)
+		buf.B = encode(buf.B, fi)
+		buf.B = append(buf.B, '.')
 	}
 
-	// Create copy of enc's value
-	k.value = enc.String()
+	// Drop last '.'
+	buf.Truncate(1)
+
+	// Create string copy from buf
+	k.value = string(buf.B)
 }
 
 // keyFields represents a list of struct fields
@@ -148,78 +150,38 @@ func genkey(lookup string, parts ...any) string {
 		panic("no key parts provided")
 	}
 
-	// Acquire encoder and reset
-	enc := encpool.Get().(*encoder)
-	defer encpool.Put(enc)
-	enc.Reset()
+	// Acquire buffer and reset
+	buf := bufpool.Get().(*byteutil.Buffer)
+	defer bufpool.Put(buf)
+	buf.Reset()
 
 	// Append the lookup prefix
-	enc.AppendString(lookup)
-	enc.AppendByte('.')
+	buf.B = append(buf.B, lookup...)
+	buf.B = append(buf.B, '.')
 
 	// Encode each key part
 	for _, part := range parts {
-		enc.Encode(part)
+		buf.B = encode(buf.B, part)
+		buf.B = append(buf.B, '.')
 	}
 
-	return enc.String()
-}
+	// Drop last '.'
+	buf.Truncate(1)
 
-// encpool is a memory pool of binary encoders
-// with cached codecs to speed-up encoding.
-var encpool = sync.Pool{
-	New: func() any {
-		b := make([]byte, 0, 512)
-		return &encoder{
-			enc: binary.NewEncoder(nil),
-			buf: byteutil.Buffer{B: b},
-		}
-	},
-}
-
-// encoder wraps a binary encoder and byte buffer
-// to provide easy access to both from a singular
-// / memory pool. The encoder caches binary codecs
-// and the byte buffer provides an output location
-// when encoding values to binary for cache keys.
-type encoder struct {
-	enc *binary.Encoder
-	buf byteutil.Buffer
-}
-
-func (enc *encoder) Encode(v any) {
-	// Reset to clear errors
-	enc.enc.Reset(&enc.buf)
-
-	// Encode value, accept no errors
-	if err := enc.enc.Encode(v); err != nil {
-		panic(fmt.Errorf("invalid key: %w", err))
-	}
-}
-
-func (enc *encoder) AppendByte(b byte) {
-	_ = enc.buf.WriteByte(b)
-}
-
-func (enc *encoder) AppendBytes(b []byte) {
-	enc.buf.B = append(enc.buf.B, b...)
-	_, _ = enc.buf.Write(b)
-}
-
-func (enc *encoder) AppendString(s string) {
-	_, _ = enc.buf.WriteString(s)
-}
-
-func (enc *encoder) String() string {
-	return string(enc.buf.B)
-}
-
-func (enc *encoder) Reset() {
-	enc.buf.Reset()
+	// Return string copy
+	return string(buf.B)
 }
 
 // isExported checks whether function name is exported.
 func isExported(fnName string) bool {
 	r, _ := utf8.DecodeRuneInString(fnName)
 	return unicode.IsUpper(r)
+}
+
+// bufpool provides a memory pool of byte
+// buffers use when encoding key types.
+var bufpool = sync.Pool{
+	New: func() any {
+		return &byteutil.Buffer{B: make([]byte, 0, 512)}
+	},
 }

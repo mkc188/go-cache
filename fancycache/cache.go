@@ -2,7 +2,6 @@ package fancycache
 
 import (
 	"reflect"
-	"sync"
 	"time"
 
 	"codeberg.org/gruf/go-cache/v3"
@@ -12,7 +11,6 @@ import (
 type Cache[Value any] struct {
 	cache cache.TTLCache[string, *entry[Value]]
 	keys  structKeys
-	pool  sync.Pool
 }
 
 // New ...

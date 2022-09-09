@@ -10,11 +10,16 @@ import (
 )
 
 const (
-	testLookupField1     = "Field1"
-	testLookupField2     = "Field2"
-	testLookupField3     = "Field3"
-	testLookupField4     = "Field4"
-	testLookupField5And6 = "Field5.Field6"
+	testLookupField1      = "Field1"
+	testLookupField2      = "Field2"
+	testLookupField3      = "Field3"
+	testLookupField4      = "Field4"
+	testLookupField5And6  = "Field5.Field6"
+	testLookupField7      = "Field7"
+	testLookupField8      = "Field8"
+	testLookupField9And10 = "Field9.Field10"
+	testLookupField11     = "Field11"
+	testLookupField12     = "Field12"
 )
 
 var testLookups = []struct {
@@ -41,44 +46,88 @@ var testLookups = []struct {
 		Lookup: testLookupField5And6,
 		Fields: func(tt testType) []any { return []any{tt.Field5, tt.Field6} },
 	},
+	{
+		Lookup: testLookupField7,
+		Fields: func(tt testType) []any { return []any{tt.Field7} },
+	},
+	{
+		Lookup: testLookupField8,
+		Fields: func(tt testType) []any { return []any{tt.Field8} },
+	},
+	{
+		Lookup: testLookupField9And10,
+		Fields: func(tt testType) []any { return []any{tt.Field9, tt.Field10} },
+	},
+	{
+		Lookup: testLookupField11,
+		Fields: func(tt testType) []any { return []any{tt.Field11} },
+	},
+	{
+		Lookup: testLookupField12,
+		Fields: func(tt testType) []any { return []any{tt.Field12} },
+	},
 }
 
 type testType struct {
 	// Each must be unique
-	Field1 string
-	Field2 int
-	Field3 uint
-	Field4 float32
+	Field1  string
+	Field2  int
+	Field3  uint
+	Field4  float32
+	Field7  time.Time
+	Field8  *time.Time
+	Field11 []byte
+	Field12 []rune
 
 	// Combined must be unique
-	Field5 string
-	Field6 string
+	Field5  string
+	Field6  string
+	Field9  time.Duration
+	Field10 *time.Duration
 }
 
 var testEntries = []testType{
 	{
-		Field1: "i am medium",
-		Field2: 42,
-		Field3: 69,
-		Field4: 42.69,
-		Field5: "hello",
-		Field6: "world",
+		Field1:  "i am medium",
+		Field2:  42,
+		Field3:  69,
+		Field4:  42.69,
+		Field5:  "hello",
+		Field6:  "world",
+		Field7:  time.Time{},
+		Field8:  nil,
+		Field9:  0,
+		Field10: nil,
+		Field11: nil,
+		Field12: nil,
 	},
 	{
-		Field1: "i am small",
-		Field2: math.MinInt,
-		Field3: 0,
-		Field4: math.SmallestNonzeroFloat32,
-		Field5: "hello",
-		Field6: "earth",
+		Field1:  "i am small",
+		Field2:  math.MinInt,
+		Field3:  0,
+		Field4:  math.SmallestNonzeroFloat32,
+		Field5:  "hello",
+		Field6:  "earth",
+		Field7:  time.Time{}.Add(time.Second),
+		Field8:  &time.Time{},
+		Field9:  time.Millisecond,
+		Field10: func() *time.Duration { var d time.Duration; return &d }(),
+		Field11: []byte("hello world"),
+		Field12: []rune("hello world"),
 	},
 	{
-		Field1: "i am large",
-		Field2: math.MaxInt,
-		Field3: math.MaxUint,
-		Field4: math.MaxFloat32,
-		Field5: "hello",
-		Field6: "moon",
+		Field1:  "i am large",
+		Field2:  math.MaxInt,
+		Field3:  math.MaxUint,
+		Field4:  math.MaxFloat32,
+		Field5:  "hello",
+		Field6:  "moon",
+		Field7:  time.Time{}.Add(time.Second * 2),
+		Field8:  func() *time.Time { t := time.Now(); return &t }(),
+		Field9:  time.Second,
+		Field10: func() *time.Duration { d := time.Millisecond; return &d }(),
+		Field11: []byte{'\n'},
+		Field12: []rune{'\n'},
 	},
 }
 
@@ -143,7 +192,11 @@ func TestCache(t *testing.T) {
 	// Add all entries to cache
 	for i := range testEntries {
 		t.Logf("Cache.Put(%+v)", testEntries[i])
-		c.Put(&(testEntries[i]))
+		if !c.Put(&(testEntries[i])) {
+			t.Fatalf("placing entry failed")
+		} else if c.Put(&(testEntries[i])) {
+			t.Errorf("placing duplicate entry succeeded")
+		}
 	}
 
 	// Ensure all entries are expected
@@ -186,7 +239,11 @@ func TestCache(t *testing.T) {
 	// Re-add all entries to cache
 	for i := range testEntries {
 		t.Logf("Cache.Put(%+v)", testEntries[i])
-		c.Put(&(testEntries[i]))
+		if !c.Put(&(testEntries[i])) {
+			t.Fatalf("placing entry failed")
+		} else if c.Put(&(testEntries[i])) {
+			t.Errorf("placing duplicate entry succeeded")
+		}
 	}
 
 	close(done) // stop the background loop
