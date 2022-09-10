@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"codeberg.org/gruf/go-byteutil"
+	"codeberg.org/gruf/go-mangler"
 )
 
 // structKeys provides convience methods for a list
@@ -83,7 +84,7 @@ func (k *cacheKey) populate(buf *byteutil.Buffer, v reflect.Value) {
 	for _, idx := range k.fields.fields {
 		fv := v.Field(idx)
 		fi := fv.Interface()
-		buf.B = encode(buf.B, fi)
+		buf.B = mangler.Append(buf.B, fi)
 		buf.B = append(buf.B, '.')
 	}
 
@@ -161,7 +162,7 @@ func genkey(lookup string, parts ...any) string {
 
 	// Encode each key part
 	for _, part := range parts {
-		buf.B = encode(buf.B, part)
+		buf.B = mangler.Append(buf.B, part)
 		buf.B = append(buf.B, '.')
 	}
 
