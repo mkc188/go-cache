@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	codeberg.org/gruf/go-byteutil v1.0.2
-	codeberg.org/gruf/go-mangler v0.0.0-20220910230308-d2add12ea7af
+	codeberg.org/gruf/go-mangler v1.0.0
 	codeberg.org/gruf/go-sched v1.1.1
 	github.com/google/go-cmp v0.5.8
 )

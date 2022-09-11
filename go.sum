@@ -7,8 +7,8 @@ codeberg.org/gruf/go-bytes v1.0.2/go.mod h1:1v/ibfaosfXSZtRdW2rWaVrDXMc9E3bsi/M9
 codeberg.org/gruf/go-byteutil v1.0.2 h1:OesVyK5VKWeWdeDR00zRJ+Oy8hjXx1pBhn7WVvcZWVE=
 codeberg.org/gruf/go-byteutil v1.0.2/go.mod h1:cWM3tgMCroSzqoBXUXMhvxTxYJp+TbCr6ioISRY5vSU=
 codeberg.org/gruf/go-errors/v2 v2.0.0/go.mod h1:ZRhbdhvgoUA3Yw6e56kd9Ox984RrvbEFC2pOXyHDJP4=
-codeberg.org/gruf/go-mangler v0.0.0-20220910230308-d2add12ea7af h1:HCDMq6ElvSenuZagVROIM6ZBeADWOO2ODZSA0vgB5f8=
-codeberg.org/gruf/go-mangler v0.0.0-20220910230308-d2add12ea7af/go.mod h1:TefI5wpk6RgGkTIcF5uU7E8dBsMVeWifaRzqhOop/ww=
+codeberg.org/gruf/go-mangler v1.0.0 h1:RJnWAMDKIXqsJIQ6HcdaNmV009Mq43gpCVR2LHS/EdA=
+codeberg.org/gruf/go-mangler v1.0.0/go.mod h1:TefI5wpk6RgGkTIcF5uU7E8dBsMVeWifaRzqhOop/ww=
 codeberg.org/gruf/go-runners v1.3.0 h1:ZhJ3pFivyZgM/JfKTIc312rI/XUiIfLheDB1mFPRTEk=
 codeberg.org/gruf/go-runners v1.3.0/go.mod h1:rl0EdZNozkRMb21DAtOL5L4oTfmslYQdZgq2RMMc/H4=
 codeberg.org/gruf/go-sched v1.1.1 h1:YtLSQhpypzuD3HTup5oF7LLWB79gTL4nqW06kH4Vwks=
@@ -19,6 +19,5 @@ github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08 h1:ox2F0PSMlrAAiAdk
 github.com/fxamacker/cbor v1.5.1 h1:XjQWBgdmQyqimslUh5r4tUGmoqzHmBFQOImkWGi2awg=
 github.com/google/go-cmp v0.5.8 h1:e6P7q2lk1O+qJJb4BtCQXlK8vWEO8V1ZeuEdJNOqZyg=
 github.com/google/go-cmp v0.5.8/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/kelindar/binary v1.0.17 h1:DANIwtqpi9EuD71gmiecWASpyKK6C1iCTcx0VaP5QLk=
 github.com/mitchellh/hashstructure/v2 v2.0.2 h1:vGKWl0YJqUNxE8d+h8f6NJLcCJrgbhC4NcD46KavDd4=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
