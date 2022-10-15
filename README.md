@@ -8,7 +8,7 @@ A TTL cache implementation with much of the inner workings exposed, designed to 
 
 ## lookup
 
-`lookup.Cache` is an example of a more complex cache implementation using `ttl.Cache{}` as its underpinning. It provides caching of of items under multiple keys.
+`lookup.Cache` is an example of a more complex cache implementation using `ttl.Cache{}` as its underpinning. It provides caching of items under multiple keys.
 
 ## result
 
