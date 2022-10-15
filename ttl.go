@@ -118,20 +118,8 @@ func (c *TTLCache[K, V]) Sweep(now time.Time) {
 		return
 	}
 
-	// Store list of evicted items for later callbacks
-	evicts := make([]*Entry[K, V], 0, c.Cache.Len()-after-1)
-
-	// Truncate all items after youngest eviction age.
-	c.Cache.Truncate(cap(evicts), func(_ K, item *Entry[K, V]) {
-		evicts = append(evicts, item)
-	})
-
-	// Pass each evicted to callback
-	_ = c.Evict // nil check
-	for _, item := range evicts {
-		c.Evict(item)
-		c.free(item)
-	}
+	// Truncate items, calling eviction hook
+	c.truncate(c.Cache.Len()-after-1, c.Evict)
 }
 
 // SetEvictionCallback: implements cache.Cache's SetEvictionCallback().
@@ -146,9 +134,6 @@ func (c *TTLCache[K, V]) SetEvictionCallback(hook func(*Entry[K, V])) {
 	defer c.Unlock()
 
 	// Update hook
-	c.Cache.Hook(func(_ K, item *Entry[K, V]) {
-		hook(item)
-	})
 	c.Evict = hook
 }
 
@@ -224,8 +209,17 @@ func (c *TTLCache[K, V]) Add(key K, value V) bool {
 	item.Value = value
 	item.Expiry = time.Now().Add(c.TTL)
 
-	// Place in the map
-	c.Cache.Set(key, item)
+	var hook func(K, *Entry[K, V])
+
+	if c.Evict != nil {
+		// Pass evicted entry to user hook
+		hook = func(_ K, item *Entry[K, V]) {
+			c.Evict(item)
+		}
+	}
+
+	// Place new item in the map with hook
+	c.Cache.SetWithHook(key, item, hook)
 
 	return true
 }
@@ -240,8 +234,10 @@ func (c *TTLCache[K, V]) Set(key K, value V) {
 	item, ok := c.Cache.Get(key)
 
 	if ok {
-		// Invalidate existing
-		c.Invalid(item)
+		if c.Invalid != nil {
+			// Invalidate existing
+			c.Invalid(item)
+		}
 	} else {
 		// Allocate new item
 		item = c.alloc()
@@ -266,8 +262,10 @@ func (c *TTLCache[K, V]) CAS(key K, old V, new V, cmp func(V, V) bool) bool {
 		return false
 	}
 
-	// Invalidate item
-	c.Invalid(item)
+	if c.Invalid != nil {
+		// Invalidate item
+		c.Invalid(item)
+	}
 
 	// Update item + Expiry
 	item.Value = new
@@ -289,8 +287,11 @@ func (c *TTLCache[K, V]) Swap(key K, swp V) V {
 		return value
 	}
 
-	// invalidate old
-	c.Invalid(item)
+	if c.Invalid != nil {
+		// invalidate old
+		c.Invalid(item)
+	}
+
 	old := item.Value
 
 	// update item + Expiry
@@ -320,8 +321,10 @@ func (c *TTLCache[K, V]) Invalidate(key K) bool {
 		return false
 	}
 
-	// Invalidate item
-	c.Invalid(item)
+	if c.Invalid != nil {
+		// Invalidate item
+		c.Invalid(item)
+	}
 
 	// Remove from cache map
 	_ = c.Cache.Delete(key)
@@ -334,24 +337,9 @@ func (c *TTLCache[K, V]) Invalidate(key K) bool {
 
 // Clear: implements cache.Cache's Clear().
 func (c *TTLCache[K, V]) Clear() {
-	// Truncate within lock
 	c.Lock()
 	defer c.Unlock()
-
-	// Store list of invalidated items for later callbacks
-	deleted := make([]*Entry[K, V], 0, c.Cache.Len())
-
-	// Truncate and store list of invalidated items
-	c.Cache.Truncate(cap(deleted), func(_ K, item *Entry[K, V]) {
-		deleted = append(deleted, item)
-	})
-
-	// Pass each invalidated to callback
-	_ = c.Invalid // nil check
-	for _, item := range deleted {
-		c.Invalid(item)
-		c.free(item)
-	}
+	c.truncate(c.Cache.Len(), c.Invalid)
 }
 
 // Len: implements cache.Cache's Len().
@@ -368,6 +356,29 @@ func (c *TTLCache[K, V]) Cap() int {
 	l := c.Cache.Cap()
 	c.Unlock()
 	return l
+}
+
+// truncate will call Cache.Truncate(sz), and if provided a hook will temporarily store deleted items before passing them to the hook. This is required in order to prevent cache writes during .Truncate().
+func (c *TTLCache[K, V]) truncate(sz int, hook func(*Entry[K, V])) {
+	if hook == nil {
+		// No hook was provided, we can simply truncate and free items immediately.
+		c.Cache.Truncate(c.Cache.Len(), func(_ K, item *Entry[K, V]) { c.free(item) })
+		return
+	}
+
+	// Store list of deleted items for later callbacks
+	deleted := make([]*Entry[K, V], 0, sz)
+
+	// Truncate and store list of deleted items
+	c.Cache.Truncate(sz, func(_ K, item *Entry[K, V]) {
+		deleted = append(deleted, item)
+	})
+
+	// Pass each deleted to hook, then free
+	for _, item := range deleted {
+		hook(item)
+		c.free(item)
+	}
 }
 
 // alloc will acquire cache entry from pool, or allocate new.
