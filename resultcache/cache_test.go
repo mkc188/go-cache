@@ -1,11 +1,12 @@
-package fancycache_test
+package resultcache_test
 
 import (
+	"errors"
 	"math"
 	"testing"
 	"time"
 
-	"codeberg.org/gruf/go-cache/v3/fancycache"
+	"codeberg.org/gruf/go-cache/v3/resultcache"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -142,7 +143,11 @@ func TestCache(t *testing.T) {
 	}()
 
 	// Prepare cache and schedule cleaning
-	c := fancycache.New[*testType](10, lookups)
+	c := resultcache.New(lookups, func(tt *testType) *testType {
+		tt2 := new(testType)
+		*tt2 = *tt
+		return tt2
+	})
 	c.SetTTL(time.Second*5, false)
 	_ = c.Start(time.Second * 10)
 
@@ -191,24 +196,31 @@ func TestCache(t *testing.T) {
 
 	// Add all entries to cache
 	for i := range testEntries {
-		t.Logf("Cache.Put(%+v)", testEntries[i])
-		if !c.Put(&(testEntries[i])) {
-			t.Fatalf("placing entry failed")
-		} else if c.Put(&(testEntries[i])) {
-			t.Errorf("placing duplicate entry succeeded")
+		t.Logf("Cache.Store(%+v)", testEntries[i])
+
+		if err := c.Store(&(testEntries[i]), func() error {
+			return nil
+		}); err != nil {
+			t.Fatalf("placing entry failed: %v", err)
+		}
+
+		if err := c.Store(&(testEntries[i]), func() error {
+			return nil
+		}); !resultcache.IsConflictErr(err) {
+			t.Fatalf("placing duplicate entry succeeded")
 		}
 	}
 
 	// Ensure all entries are expected
 	for _, entry := range testEntries {
 		for _, lookup := range testLookups {
-			key := lookup.Fields(entry)
-			check, ok := c.Get(lookup.Lookup, key...)
-			t.Logf("Cache.Get(%s,%v)", lookup.Lookup, key)
-			if !ok {
-				t.Errorf("key unexpectedly not found in cache: %s,%v", lookup.Lookup, key)
+			check, err := c.Load(lookup.Lookup, func() (*testType, error) {
+				return nil, errors.New("item SHOULD be cached")
+			}, lookup.Fields(entry)...)
+			if err != nil {
+				t.Errorf("key unexpectedly not found in cache: %v", err)
 			} else if !cmp.Equal(entry, *check) {
-				t.Errorf("value not as expected for key in cache: %s,%v", lookup.Lookup, key)
+				t.Errorf("value not as expected for key in cache: %s", lookup.Lookup)
 			}
 		}
 	}
@@ -238,11 +250,18 @@ func TestCache(t *testing.T) {
 
 	// Re-add all entries to cache
 	for i := range testEntries {
-		t.Logf("Cache.Put(%+v)", testEntries[i])
-		if !c.Put(&(testEntries[i])) {
-			t.Fatalf("placing entry failed")
-		} else if c.Put(&(testEntries[i])) {
-			t.Errorf("placing duplicate entry succeeded")
+		t.Logf("Cache.Store(%+v)", testEntries[i])
+
+		if err := c.Store(&(testEntries[i]), func() error {
+			return nil
+		}); err != nil {
+			t.Fatalf("placing entry failed: %v", err)
+		}
+
+		if err := c.Store(&(testEntries[i]), func() error {
+			return nil
+		}); !resultcache.IsConflictErr(err) {
+			t.Fatalf("placing duplicate entry succeeded")
 		}
 	}
 

@@ -3,30 +3,54 @@ package cache
 import (
 	"sync"
 	"time"
+
+	"codeberg.org/gruf/go-maps"
 )
 
-// TTLCache is the underlying Cache implementation, providing both the base
-// Cache interface and access to "unsafe" methods so that you may build your
-// customized caches ontop of this structure.
+// Entry represents an item in the cache, with it's currently calculated Expiry time.
+type Entry[Key comparable, Value any] struct {
+	Key    Key
+	Value  Value
+	Expiry time.Time
+}
+
+// TTLCache is the underlying Cache implementation, providing both the base Cache interface and unsafe access to underlying map to allow flexibility in building your own.
 type TTLCache[Key comparable, Value any] struct {
 	// TTL is the cache item TTL.
 	TTL time.Duration
 
-	// Evict is the hook that is called when an item is
-	// evicted from the cache, includes manual delete.
-	Evict func(Key, Value)
+	// Evict is the hook that is called when an item is evicted from the cache, includes manual delete.
+	Evict func(*Entry[Key, Value])
 
-	// Invalid is the hook that is called when an item's
-	// data in the cache is invalidated.
-	Invalid func(Key, Value)
+	// Invalid is the hook that is called when an item's data in the cache is invalidated.
+	Invalid func(*Entry[Key, Value])
 
 	// Cache is the underlying hashmap used for this cache.
-	Cache map[Key](*Entry[Value])
+	Cache maps.LRUMap[Key, *Entry[Key, Value]]
 
-	stop func()     // stop is the cancel function for the scheduled eviction routine
-	mu   sync.Mutex // mu protects TTLCache for concurrent access
+	// stop is the eviction routine cancel func.
+	stop func()
+
+	// pool is a memory pool of entry objects.
+	pool []*Entry[Key, Value]
+
+	// Embedded mutex.
+	sync.Mutex
 }
 
+// Init will initialize this cache with given initial length, maximum capacity and item TTL.
+func (c *TTLCache[K, V]) Init(len, cap int, ttl time.Duration) {
+	if ttl <= 0 {
+		// Default duration
+		ttl = time.Second * 5
+	}
+	c.TTL = ttl
+	c.SetEvictionCallback(nil)
+	c.SetInvalidateCallback(nil)
+	c.Cache.Init(len, cap)
+}
+
+// Start: implements cache.Cache's Start().
 func (c *TTLCache[K, V]) Start(freq time.Duration) (ok bool) {
 	// Nothing to start
 	if freq <= 0 {
@@ -34,22 +58,23 @@ func (c *TTLCache[K, V]) Start(freq time.Duration) (ok bool) {
 	}
 
 	// Safely start
-	c.mu.Lock()
+	c.Lock()
 
 	if ok = c.stop == nil; ok {
 		// Not yet running, schedule us
-		c.stop = schedule(c.sweep, freq)
+		c.stop = schedule(c.Sweep, freq)
 	}
 
 	// Done with lock
-	c.mu.Unlock()
+	c.Unlock()
 
 	return
 }
 
+// Stop: implements cache.Cache's Stop().
 func (c *TTLCache[K, V]) Stop() (ok bool) {
 	// Safely stop
-	c.mu.Lock()
+	c.Lock()
 
 	if ok = c.stop != nil; ok {
 		// We're running, cancel evicts
@@ -58,184 +83,214 @@ func (c *TTLCache[K, V]) Stop() (ok bool) {
 	}
 
 	// Done with lock
-	c.mu.Unlock()
+	c.Unlock()
 
 	return
 }
 
-// sweep attempts to evict expired items (with callback!) from cache.
-func (c *TTLCache[K, V]) sweep(now time.Time) {
-	// Lock and defer unlock (in case of hook panic)
-	c.mu.Lock()
-	defer c.mu.Unlock()
+// Sweep attempts to evict expired items (with callback!) from cache.
+func (c *TTLCache[K, V]) Sweep(now time.Time) {
+	var after int
 
-	// Sweep the cache for old items!
-	for key, item := range c.Cache {
+	// Sweep within lock
+	c.Lock()
+	defer c.Unlock()
+
+	// Sentinel value
+	after = -1
+
+	// The cache will be ordered by expiry date, we iterate until we reach the index of
+	// the youngest item that hsa expired, as all succeeding items will also be expired.
+	c.Cache.RangeIf(0, c.Cache.Len(), func(i int, _ K, item *Entry[K, V]) bool {
 		if now.After(item.Expiry) {
-			c.Evict(key, item.Value)
-			delete(c.Cache, key)
+			after = i
+
+			// All older than this can be dropped
+			return false
 		}
+
+		// Continue looping
+		return true
+	})
+
+	// None yet expired
+	if after == -1 {
+		return
+	}
+
+	// Store list of evicted items for later callbacks
+	evicts := make([]*Entry[K, V], 0, c.Cache.Len()-after-1)
+
+	// Truncate all items after youngest eviction age.
+	c.Cache.Truncate(cap(evicts), func(_ K, item *Entry[K, V]) {
+		evicts = append(evicts, item)
+	})
+
+	// Pass each evicted to callback
+	_ = c.Evict // nil check
+	for _, item := range evicts {
+		c.Evict(item)
+		c.free(item)
 	}
 }
 
-// Lock locks the cache mutex.
-func (c *TTLCache[K, V]) Lock() {
-	c.mu.Lock()
-}
-
-// Unlock unlocks the cache mutex.
-func (c *TTLCache[K, V]) Unlock() {
-	c.mu.Unlock()
-}
-
-func (c *TTLCache[K, V]) SetEvictionCallback(hook func(K, V)) {
+// SetEvictionCallback: implements cache.Cache's SetEvictionCallback().
+func (c *TTLCache[K, V]) SetEvictionCallback(hook func(*Entry[K, V])) {
 	// Ensure non-nil hook
 	if hook == nil {
-		hook = func(K, V) {}
+		hook = func(*Entry[K, V]) {}
 	}
 
-	// Safely set evict hook
-	c.mu.Lock()
+	// Update within lock
+	c.Lock()
+	defer c.Unlock()
+
+	// Update hook
+	c.Cache.Hook(func(_ K, item *Entry[K, V]) {
+		hook(item)
+	})
 	c.Evict = hook
-	c.mu.Unlock()
 }
 
-func (c *TTLCache[K, V]) SetInvalidateCallback(hook func(K, V)) {
+// SetInvalidateCallback: implements cache.Cache's SetInvalidateCallback().
+func (c *TTLCache[K, V]) SetInvalidateCallback(hook func(*Entry[K, V])) {
 	// Ensure non-nil hook
 	if hook == nil {
-		hook = func(K, V) {}
+		hook = func(*Entry[K, V]) {}
 	}
 
-	// Safely set invalidate hook
-	c.mu.Lock()
+	// Update within lock
+	c.Lock()
+	defer c.Unlock()
+
+	// Update hook
 	c.Invalid = hook
-	c.mu.Unlock()
 }
 
+// SetTTL: implements cache.Cache's SetTTL().
 func (c *TTLCache[K, V]) SetTTL(ttl time.Duration, update bool) {
-	// Safely update TTL
-	c.mu.Lock()
+	if ttl < 0 {
+		panic("ttl must be greater than zero")
+	}
+
+	// Update within lock
+	c.Lock()
+	defer c.Unlock()
+
+	// Set updated TTL
 	diff := ttl - c.TTL
 	c.TTL = ttl
 
 	if update {
-		// Update existing cache entries
-		for _, Entry := range c.Cache {
-			Entry.Expiry.Add(diff)
-		}
+		// Update existing cache entries with new expiry time
+		c.Cache.Range(0, c.Cache.Len(), func(i int, key K, item *Entry[K, V]) {
+			item.Expiry = item.Expiry.Add(diff)
+		})
 	}
-
-	// We're done
-	c.mu.Unlock()
 }
 
+// Get: implements cache.Cache's Get().
 func (c *TTLCache[K, V]) Get(key K) (V, bool) {
-	c.mu.Lock()
-	value, ok := c.GetUnsafe(key)
-	c.mu.Unlock()
-	return value, ok
-}
+	// Read within lock
+	c.Lock()
+	defer c.Unlock()
 
-// GetUnsafe is the mutex-unprotected logic for Cache.Get().
-func (c *TTLCache[K, V]) GetUnsafe(key K) (V, bool) {
-	item, ok := c.Cache[key]
+	// Check for item in cache
+	item, ok := c.Cache.Get(key)
 	if !ok {
 		var value V
 		return value, false
 	}
+
+	// Update item expiry and return
 	item.Expiry = time.Now().Add(c.TTL)
 	return item.Value, true
 }
 
-func (c *TTLCache[K, V]) Put(key K, value V) bool {
-	c.mu.Lock()
-	success := c.PutUnsafe(key, value)
-	c.mu.Unlock()
-	return success
-}
+// Add: implements cache.Cache's Add().
+func (c *TTLCache[K, V]) Add(key K, value V) bool {
+	// Write within lock
+	c.Lock()
+	defer c.Unlock()
 
-// PutUnsafe is the mutex-unprotected logic for Cache.Put().
-func (c *TTLCache[K, V]) PutUnsafe(key K, value V) bool {
 	// If already cached, return
-	if _, ok := c.Cache[key]; ok {
+	if c.Cache.Has(key) {
 		return false
 	}
 
-	// Create new cached item
-	c.Cache[key] = &Entry[V]{
-		Value:  value,
-		Expiry: time.Now().Add(c.TTL),
-	}
+	// Alloc new item
+	item := c.alloc()
+	item.Key = key
+	item.Value = value
+	item.Expiry = time.Now().Add(c.TTL)
+
+	// Place in the map
+	c.Cache.Set(key, item)
 
 	return true
 }
 
+// Set: implements cache.Cache's Set().
 func (c *TTLCache[K, V]) Set(key K, value V) {
-	c.mu.Lock()
-	defer c.mu.Unlock() // defer in case of hook panic
-	c.SetUnsafe(key, value)
-}
+	// Write within lock
+	c.Lock()
+	defer c.Unlock()
 
-// SetUnsafe is the mutex-unprotected logic for Cache.Set(), it calls externally-set functions.
-func (c *TTLCache[K, V]) SetUnsafe(key K, value V) {
-	item, ok := c.Cache[key]
+	// Check if already exists
+	item, ok := c.Cache.Get(key)
+
 	if ok {
-		// call invalidate hook
-		c.Invalid(key, item.Value)
+		// Invalidate existing
+		c.Invalid(item)
 	} else {
-		// alloc new item
-		item = &Entry[V]{}
-		c.Cache[key] = item
+		// Allocate new item
+		item = c.alloc()
+		item.Key = key
+		c.Cache.Set(key, item)
 	}
 
-	// Update the item + Expiry
-	item.Value = value
+	// Update the item value + expiry
 	item.Expiry = time.Now().Add(c.TTL)
+	item.Value = value
 }
 
-func (c *TTLCache[K, V]) CAS(key K, cmp V, swp V) bool {
-	c.mu.Lock()
-	ok := c.CASUnsafe(key, cmp, swp)
-	c.mu.Unlock()
-	return ok
-}
+// CAS: implements cache.Cache's CAS().
+func (c *TTLCache[K, V]) CAS(key K, old V, new V, cmp func(V, V) bool) bool {
+	// CAS within lock
+	c.Lock()
+	defer c.Unlock()
 
-// CASUnsafe is the mutex-unprotected logic for Cache.CAS().
-func (c *TTLCache[K, V]) CASUnsafe(key K, cmp V, swp V) bool {
-	// Check for item
-	item, ok := c.Cache[key]
-	if !ok || !Compare(item.Value, cmp) {
+	// Check for item in cache
+	item, ok := c.Cache.Get(key)
+	if !ok || !cmp(item.Value, old) {
 		return false
 	}
 
 	// Invalidate item
-	c.Invalid(key, item.Value)
+	c.Invalid(item)
 
 	// Update item + Expiry
-	item.Value = swp
+	item.Value = new
 	item.Expiry = time.Now().Add(c.TTL)
 
 	return ok
 }
 
+// Swap: implements cache.Cache's Swap().
 func (c *TTLCache[K, V]) Swap(key K, swp V) V {
-	c.mu.Lock()
-	old := c.SwapUnsafe(key, swp)
-	c.mu.Unlock()
-	return old
-}
+	// Swap within lock
+	c.Lock()
+	defer c.Unlock()
 
-// SwapUnsafe is the mutex-unprotected logic for Cache.Swap().
-func (c *TTLCache[K, V]) SwapUnsafe(key K, swp V) V {
-	// Check for item
-	item, ok := c.Cache[key]
+	// Check for item in cache
+	item, ok := c.Cache.Get(key)
 	if !ok {
 		var value V
 		return value
 	}
 
-	// invalidate old item
-	c.Invalid(key, item.Value)
+	// invalidate old
+	c.Invalid(item)
 	old := item.Value
 
 	// update item + Expiry
@@ -245,68 +300,95 @@ func (c *TTLCache[K, V]) SwapUnsafe(key K, swp V) V {
 	return old
 }
 
+// Has: implements cache.Cache's Has().
 func (c *TTLCache[K, V]) Has(key K) bool {
-	c.mu.Lock()
-	ok := c.HasUnsafe(key)
-	c.mu.Unlock()
+	c.Lock()
+	ok := c.Cache.Has(key)
+	c.Unlock()
 	return ok
 }
 
-// HasUnsafe is the mutex-unprotected logic for Cache.Has().
-func (c *TTLCache[K, V]) HasUnsafe(key K) bool {
-	_, ok := c.Cache[key]
-	return ok
-}
-
+// Invalidate: implements cache.Cache's Invalidate().
 func (c *TTLCache[K, V]) Invalidate(key K) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.InvalidateUnsafe(key)
-}
+	// Delete within lock
+	c.Lock()
+	defer c.Unlock()
 
-// InvalidateUnsafe is mutex-unprotected logic for Cache.Invalidate().
-func (c *TTLCache[K, V]) InvalidateUnsafe(key K) bool {
 	// Check if we have item with key
-	item, ok := c.Cache[key]
+	item, ok := c.Cache.Get(key)
 	if !ok {
 		return false
 	}
 
-	// Call hook, remove from cache
-	c.Invalid(key, item.Value)
-	delete(c.Cache, key)
+	// Invalidate item
+	c.Invalid(item)
+
+	// Remove from cache map
+	_ = c.Cache.Delete(key)
+
+	// Return item to pool
+	c.free(item)
+
 	return true
 }
 
+// Clear: implements cache.Cache's Clear().
 func (c *TTLCache[K, V]) Clear() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.ClearUnsafe()
-}
+	// Truncate within lock
+	c.Lock()
+	defer c.Unlock()
 
-// ClearUnsafe is mutex-unprotected logic for Cache.Clean().
-func (c *TTLCache[K, V]) ClearUnsafe() {
-	for key, item := range c.Cache {
-		c.Invalid(key, item.Value)
-		delete(c.Cache, key)
+	// Store list of invalidated items for later callbacks
+	deleted := make([]*Entry[K, V], 0, c.Cache.Len())
+
+	// Truncate and store list of invalidated items
+	c.Cache.Truncate(cap(deleted), func(_ K, item *Entry[K, V]) {
+		deleted = append(deleted, item)
+	})
+
+	// Pass each invalidated to callback
+	_ = c.Invalid // nil check
+	for _, item := range deleted {
+		c.Invalid(item)
+		c.free(item)
 	}
 }
 
-func (c *TTLCache[K, V]) Size() int {
-	c.mu.Lock()
-	sz := c.SizeUnsafe()
-	c.mu.Unlock()
-	return sz
+// Len: implements cache.Cache's Len().
+func (c *TTLCache[K, V]) Len() int {
+	c.Lock()
+	l := c.Cache.Len()
+	c.Unlock()
+	return l
 }
 
-// SizeUnsafe is mutex unprotected logic for Cache.Size().
-func (c *TTLCache[K, V]) SizeUnsafe() int {
-	return len(c.Cache)
+// Cap: implements cache.Cache's Cap().
+func (c *TTLCache[K, V]) Cap() int {
+	c.Lock()
+	l := c.Cache.Cap()
+	c.Unlock()
+	return l
 }
 
-// Entry represents an item in the cache, with
-// it's currently calculated Expiry time.
-type Entry[Value any] struct {
-	Value  Value
-	Expiry time.Time
+// alloc will acquire cache entry from pool, or allocate new.
+func (c *TTLCache[K, V]) alloc() *Entry[K, V] {
+	if len(c.pool) == 0 {
+		return &Entry[K, V]{}
+	}
+	idx := len(c.pool) - 1
+	e := c.pool[idx]
+	c.pool = c.pool[:idx]
+	return e
+}
+
+// free will reset entry fields and place back in pool.
+func (c *TTLCache[K, V]) free(e *Entry[K, V]) {
+	var (
+		zk K
+		zv V
+	)
+	e.Key = zk
+	e.Value = zv
+	e.Expiry = time.Time{}
+	c.pool = append(c.pool, e)
 }

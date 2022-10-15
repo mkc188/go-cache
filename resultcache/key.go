@@ -1,4 +1,4 @@
-package fancycache
+package resultcache
 
 import (
 	"reflect"

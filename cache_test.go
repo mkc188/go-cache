@@ -2,6 +2,7 @@ package cache_test
 
 import (
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 	"unsafe"
@@ -25,8 +26,11 @@ var testEntries = map[string]interface{}{
 
 func TestCache(t *testing.T) {
 	// Prepare cache
-	c := cache.New[string, interface{}](10)
-	c.SetTTL(time.Second*5, false)
+	c := cache.New[string, interface{}](
+		len(testEntries),
+		len(testEntries)+1,
+		time.Second*5,
+	)
 
 	// Ensure we can start and stop it
 	if !c.Start(time.Second * 10) {
@@ -52,14 +56,16 @@ func TestCache(t *testing.T) {
 
 	// Track callbacks set
 	callbacks := map[string]interface{}{}
-	c.SetInvalidateCallback(func(key string, value interface{}) {
-		callbacks[key] = value
+	c.SetInvalidateCallback(func(item *cache.Entry[string, interface{}]) {
+		callbacks[item.Key] = item.Value
 	})
 
 	// Add all entries to cache
 	for key, val := range testEntries {
-		t.Logf("Cache.Put(%s, %v)", key, val)
-		c.Put(key, val)
+		t.Logf("Cache.Add(%s, %v)", key, val)
+		if !c.Add(key, val) {
+			t.Fatalf("failed adding key to cache: %s", key)
+		}
 	}
 
 	// Ensure all entries are expected
@@ -76,7 +82,7 @@ func TestCache(t *testing.T) {
 	// Update entries via CAS to ensure callback
 	for key, val := range testEntries {
 		t.Logf("Cache.CAS(%s, %v, nil)", key, val)
-		if !c.CAS(key, val, nil) && val != nil {
+		if !c.CAS(key, val, nil, reflect.DeepEqual) && val != nil {
 			t.Fatalf("CAS failed for: %s", key)
 		} else if _, ok := callbacks[key]; !ok {
 			t.Fatalf("invalidate callback not called for: %s", key)
@@ -110,7 +116,7 @@ func TestCache(t *testing.T) {
 
 	// Checking cache is off expected size
 	t.Logf("Checking cache is of expected size (0)")
-	if sz := c.Size(); sz != 0 {
+	if sz := c.Len(); sz != 0 {
 		t.Fatalf("unexpected cache size: %d", sz)
 	}
 }
