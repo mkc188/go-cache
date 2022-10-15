@@ -1,4 +1,4 @@
-package resultcache
+package result
 
 // IsConflictErr returns whether error is due to key conflict.
 func IsConflictErr(err error) bool {

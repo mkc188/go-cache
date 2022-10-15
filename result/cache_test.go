@@ -1,4 +1,4 @@
-package resultcache_test
+package result_test
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/gruf/go-cache/v3/resultcache"
+	"codeberg.org/gruf/go-cache/v3/result"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -143,7 +143,7 @@ func TestCache(t *testing.T) {
 	}()
 
 	// Prepare cache and schedule cleaning
-	c := resultcache.New(lookups, func(tt *testType) *testType {
+	c := result.New(lookups, func(tt *testType) *testType {
 		tt2 := new(testType)
 		*tt2 = *tt
 		return tt2
@@ -206,7 +206,7 @@ func TestCache(t *testing.T) {
 
 		if err := c.Store(&(testEntries[i]), func() error {
 			return nil
-		}); !resultcache.IsConflictErr(err) {
+		}); !result.IsConflictErr(err) {
 			t.Fatalf("placing duplicate entry succeeded")
 		}
 	}
@@ -260,7 +260,7 @@ func TestCache(t *testing.T) {
 
 		if err := c.Store(&(testEntries[i]), func() error {
 			return nil
-		}); !resultcache.IsConflictErr(err) {
+		}); !result.IsConflictErr(err) {
 			t.Fatalf("placing duplicate entry succeeded")
 		}
 	}

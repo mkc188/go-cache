@@ -1,4 +1,4 @@
-package resultcache
+package result
 
 import (
 	"reflect"
