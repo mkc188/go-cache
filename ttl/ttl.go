@@ -1,4 +1,4 @@
-package cache
+package ttl
 
 import (
 	"sync"
@@ -14,8 +14,8 @@ type Entry[Key comparable, Value any] struct {
 	Expiry time.Time
 }
 
-// TTLCache is the underlying Cache implementation, providing both the base Cache interface and unsafe access to underlying map to allow flexibility in building your own.
-type TTLCache[Key comparable, Value any] struct {
+// Cache is the underlying Cache implementation, providing both the base Cache interface and unsafe access to underlying map to allow flexibility in building your own.
+type Cache[Key comparable, Value any] struct {
 	// TTL is the cache item TTL.
 	TTL time.Duration
 
@@ -39,7 +39,7 @@ type TTLCache[Key comparable, Value any] struct {
 }
 
 // Init will initialize this cache with given initial length, maximum capacity and item TTL.
-func (c *TTLCache[K, V]) Init(len, cap int, ttl time.Duration) {
+func (c *Cache[K, V]) Init(len, cap int, ttl time.Duration) {
 	if ttl <= 0 {
 		// Default duration
 		ttl = time.Second * 5
@@ -51,7 +51,7 @@ func (c *TTLCache[K, V]) Init(len, cap int, ttl time.Duration) {
 }
 
 // Start: implements cache.Cache's Start().
-func (c *TTLCache[K, V]) Start(freq time.Duration) (ok bool) {
+func (c *Cache[K, V]) Start(freq time.Duration) (ok bool) {
 	// Nothing to start
 	if freq <= 0 {
 		return false
@@ -72,7 +72,7 @@ func (c *TTLCache[K, V]) Start(freq time.Duration) (ok bool) {
 }
 
 // Stop: implements cache.Cache's Stop().
-func (c *TTLCache[K, V]) Stop() (ok bool) {
+func (c *Cache[K, V]) Stop() (ok bool) {
 	// Safely stop
 	c.Lock()
 
@@ -89,7 +89,7 @@ func (c *TTLCache[K, V]) Stop() (ok bool) {
 }
 
 // Sweep attempts to evict expired items (with callback!) from cache.
-func (c *TTLCache[K, V]) Sweep(now time.Time) {
+func (c *Cache[K, V]) Sweep(now time.Time) {
 	var after int
 
 	// Sweep within lock
@@ -123,7 +123,7 @@ func (c *TTLCache[K, V]) Sweep(now time.Time) {
 }
 
 // SetEvictionCallback: implements cache.Cache's SetEvictionCallback().
-func (c *TTLCache[K, V]) SetEvictionCallback(hook func(*Entry[K, V])) {
+func (c *Cache[K, V]) SetEvictionCallback(hook func(*Entry[K, V])) {
 	// Ensure non-nil hook
 	if hook == nil {
 		hook = func(*Entry[K, V]) {}
@@ -138,7 +138,7 @@ func (c *TTLCache[K, V]) SetEvictionCallback(hook func(*Entry[K, V])) {
 }
 
 // SetInvalidateCallback: implements cache.Cache's SetInvalidateCallback().
-func (c *TTLCache[K, V]) SetInvalidateCallback(hook func(*Entry[K, V])) {
+func (c *Cache[K, V]) SetInvalidateCallback(hook func(*Entry[K, V])) {
 	// Ensure non-nil hook
 	if hook == nil {
 		hook = func(*Entry[K, V]) {}
@@ -153,7 +153,7 @@ func (c *TTLCache[K, V]) SetInvalidateCallback(hook func(*Entry[K, V])) {
 }
 
 // SetTTL: implements cache.Cache's SetTTL().
-func (c *TTLCache[K, V]) SetTTL(ttl time.Duration, update bool) {
+func (c *Cache[K, V]) SetTTL(ttl time.Duration, update bool) {
 	if ttl < 0 {
 		panic("ttl must be greater than zero")
 	}
@@ -175,7 +175,7 @@ func (c *TTLCache[K, V]) SetTTL(ttl time.Duration, update bool) {
 }
 
 // Get: implements cache.Cache's Get().
-func (c *TTLCache[K, V]) Get(key K) (V, bool) {
+func (c *Cache[K, V]) Get(key K) (V, bool) {
 	// Read within lock
 	c.Lock()
 	defer c.Unlock()
@@ -193,7 +193,7 @@ func (c *TTLCache[K, V]) Get(key K) (V, bool) {
 }
 
 // Add: implements cache.Cache's Add().
-func (c *TTLCache[K, V]) Add(key K, value V) bool {
+func (c *Cache[K, V]) Add(key K, value V) bool {
 	// Write within lock
 	c.Lock()
 	defer c.Unlock()
@@ -225,7 +225,7 @@ func (c *TTLCache[K, V]) Add(key K, value V) bool {
 }
 
 // Set: implements cache.Cache's Set().
-func (c *TTLCache[K, V]) Set(key K, value V) {
+func (c *Cache[K, V]) Set(key K, value V) {
 	// Write within lock
 	c.Lock()
 	defer c.Unlock()
@@ -251,7 +251,7 @@ func (c *TTLCache[K, V]) Set(key K, value V) {
 }
 
 // CAS: implements cache.Cache's CAS().
-func (c *TTLCache[K, V]) CAS(key K, old V, new V, cmp func(V, V) bool) bool {
+func (c *Cache[K, V]) CAS(key K, old V, new V, cmp func(V, V) bool) bool {
 	// CAS within lock
 	c.Lock()
 	defer c.Unlock()
@@ -275,7 +275,7 @@ func (c *TTLCache[K, V]) CAS(key K, old V, new V, cmp func(V, V) bool) bool {
 }
 
 // Swap: implements cache.Cache's Swap().
-func (c *TTLCache[K, V]) Swap(key K, swp V) V {
+func (c *Cache[K, V]) Swap(key K, swp V) V {
 	// Swap within lock
 	c.Lock()
 	defer c.Unlock()
@@ -302,7 +302,7 @@ func (c *TTLCache[K, V]) Swap(key K, swp V) V {
 }
 
 // Has: implements cache.Cache's Has().
-func (c *TTLCache[K, V]) Has(key K) bool {
+func (c *Cache[K, V]) Has(key K) bool {
 	c.Lock()
 	ok := c.Cache.Has(key)
 	c.Unlock()
@@ -310,7 +310,7 @@ func (c *TTLCache[K, V]) Has(key K) bool {
 }
 
 // Invalidate: implements cache.Cache's Invalidate().
-func (c *TTLCache[K, V]) Invalidate(key K) bool {
+func (c *Cache[K, V]) Invalidate(key K) bool {
 	// Delete within lock
 	c.Lock()
 	defer c.Unlock()
@@ -336,14 +336,14 @@ func (c *TTLCache[K, V]) Invalidate(key K) bool {
 }
 
 // Clear: implements cache.Cache's Clear().
-func (c *TTLCache[K, V]) Clear() {
+func (c *Cache[K, V]) Clear() {
 	c.Lock()
 	defer c.Unlock()
 	c.truncate(c.Cache.Len(), c.Invalid)
 }
 
 // Len: implements cache.Cache's Len().
-func (c *TTLCache[K, V]) Len() int {
+func (c *Cache[K, V]) Len() int {
 	c.Lock()
 	l := c.Cache.Len()
 	c.Unlock()
@@ -351,7 +351,7 @@ func (c *TTLCache[K, V]) Len() int {
 }
 
 // Cap: implements cache.Cache's Cap().
-func (c *TTLCache[K, V]) Cap() int {
+func (c *Cache[K, V]) Cap() int {
 	c.Lock()
 	l := c.Cache.Cap()
 	c.Unlock()
@@ -359,7 +359,7 @@ func (c *TTLCache[K, V]) Cap() int {
 }
 
 // truncate will call Cache.Truncate(sz), and if provided a hook will temporarily store deleted items before passing them to the hook. This is required in order to prevent cache writes during .Truncate().
-func (c *TTLCache[K, V]) truncate(sz int, hook func(*Entry[K, V])) {
+func (c *Cache[K, V]) truncate(sz int, hook func(*Entry[K, V])) {
 	if hook == nil {
 		// No hook was provided, we can simply truncate and free items immediately.
 		c.Cache.Truncate(c.Cache.Len(), func(_ K, item *Entry[K, V]) { c.free(item) })
@@ -382,7 +382,7 @@ func (c *TTLCache[K, V]) truncate(sz int, hook func(*Entry[K, V])) {
 }
 
 // alloc will acquire cache entry from pool, or allocate new.
-func (c *TTLCache[K, V]) alloc() *Entry[K, V] {
+func (c *Cache[K, V]) alloc() *Entry[K, V] {
 	if len(c.pool) == 0 {
 		return &Entry[K, V]{}
 	}
@@ -393,7 +393,7 @@ func (c *TTLCache[K, V]) alloc() *Entry[K, V] {
 }
 
 // free will reset entry fields and place back in pool.
-func (c *TTLCache[K, V]) free(e *Entry[K, V]) {
+func (c *Cache[K, V]) free(e *Entry[K, V]) {
 	var (
 		zk K
 		zv V

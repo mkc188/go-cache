@@ -4,14 +4,14 @@ import (
 	"reflect"
 	"time"
 
-	"codeberg.org/gruf/go-cache/v3"
+	"codeberg.org/gruf/go-cache/v3/ttl"
 )
 
 // Cache ...
 type Cache[Value any] struct {
-	cache cache.TTLCache[string, result[Value]] // underlying result cache
-	keys  structKeys                            // pre-determined generic type struct keys
-	copy  func(Value) Value                     // copies a Value type
+	cache ttl.Cache[string, result[Value]] // underlying result cache
+	keys  structKeys                       // pre-determined generic type struct keys
+	copy  func(Value) Value                // copies a Value type
 }
 
 // New ...
@@ -77,7 +77,7 @@ func (c *Cache[Value]) SetEvictionCallback(hook func(Value)) {
 		// Ensure non-nil hook.
 		hook = func(Value) {}
 	}
-	c.cache.SetEvictionCallback(func(item *cache.Entry[string, result[Value]]) {
+	c.cache.SetEvictionCallback(func(item *ttl.Entry[string, result[Value]]) {
 		for i := range item.Value.Keys {
 			// This is "us", already deleted.
 			if item.Value.Keys[i].value == item.Key {
@@ -104,7 +104,7 @@ func (c *Cache[Value]) SetInvalidateCallback(hook func(Value)) {
 		// Ensure non-nil hook.
 		hook = func(Value) {}
 	}
-	c.cache.SetInvalidateCallback(func(item *cache.Entry[string, result[Value]]) {
+	c.cache.SetInvalidateCallback(func(item *ttl.Entry[string, result[Value]]) {
 		for i := range item.Value.Keys {
 			// This is "us", already deleted.
 			if item.Value.Keys[i].value == item.Key {
@@ -213,7 +213,7 @@ func (c *Cache[Value]) store(r result[Value]) (string, bool) {
 
 	// Store this result under all keys.
 	for _, key := range r.Keys {
-		c.cache.Cache.Set(key.value, &cache.Entry[string, result[Value]]{
+		c.cache.Cache.Set(key.value, &ttl.Entry[string, result[Value]]{
 			Key:    key.value,
 			Value:  r,
 			Expiry: expiry,

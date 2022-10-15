@@ -1,4 +1,4 @@
-package cache_test
+package ttl_test
 
 import (
 	"net/url"
@@ -7,7 +7,7 @@ import (
 	"time"
 	"unsafe"
 
-	"codeberg.org/gruf/go-cache/v3"
+	"codeberg.org/gruf/go-cache/v3/ttl"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -19,14 +19,15 @@ var testEntries = map[string]interface{}{
 	"c":     []string{"a", "b", "c"},
 	"map":   map[string]string{"a": "a"},
 	"iface": interface{}(nil),
-	"weird": unsafe.Pointer(&cache.TTLCache[string, string]{}),
+	"weird": unsafe.Pointer(&ttl.Cache[string, string]{}),
 	"float": 2.4,
 	"url":   url.URL{},
 }
 
 func TestCache(t *testing.T) {
 	// Prepare cache
-	c := cache.New[string, interface{}](
+	c := ttl.Cache[string, any]{}
+	c.Init(
 		len(testEntries),
 		len(testEntries)+1,
 		time.Second*5,
@@ -56,7 +57,7 @@ func TestCache(t *testing.T) {
 
 	// Track callbacks set
 	callbacks := map[string]interface{}{}
-	c.SetInvalidateCallback(func(item *cache.Entry[string, interface{}]) {
+	c.SetInvalidateCallback(func(item *ttl.Entry[string, interface{}]) {
 		callbacks[item.Key] = item.Value
 	})
 

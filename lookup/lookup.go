@@ -3,7 +3,7 @@ package lookup
 import (
 	"time"
 
-	"codeberg.org/gruf/go-cache/v3"
+	"codeberg.org/gruf/go-cache/v3/ttl"
 	"github.com/cornelk/hashmap"
 )
 
@@ -28,7 +28,7 @@ type Config[OK comparable, AK hashable, V any] struct {
 type Cache[OK comparable, AK hashable, V any] struct {
 	config Config[OK, AK, V]
 	lookup Map[OK, AK]
-	cache.TTLCache[OK, V]
+	ttl.Cache[OK, V]
 }
 
 // New returns a new initialized Cache.
@@ -49,7 +49,7 @@ func (c *Cache[OK, AK, V]) Init(cfg Config[OK, AK, V]) {
 		panic("cache: nil delete lookups function")
 	}
 	c.config = cfg
-	c.TTLCache.Init(cfg.Len, cfg.Cap, cfg.TTL)
+	c.Cache.Init(cfg.Len, cfg.Cap, cfg.TTL)
 	c.SetEvictionCallback(nil)
 	c.SetInvalidateCallback(nil)
 	c.lookup.lookup = hashmap.New[string, *hashmap.Map[AK, OK]]()
@@ -61,7 +61,7 @@ func (c *Cache[OK, AK, V]) SetEvictionCallback(hook func(OK, V)) {
 	if hook == nil {
 		hook = func(o OK, v V) {}
 	}
-	c.TTLCache.SetEvictionCallback(func(item *cache.Entry[OK, V]) {
+	c.Cache.SetEvictionCallback(func(item *ttl.Entry[OK, V]) {
 		hook(item.Key, item.Value)
 		c.config.DeleteLookups(&c.lookup, item.Value)
 	})
@@ -72,7 +72,7 @@ func (c *Cache[OK, AK, V]) SetInvalidateCallback(hook func(OK, V)) {
 	if hook == nil {
 		hook = func(o OK, v V) {}
 	}
-	c.TTLCache.SetInvalidateCallback(func(item *cache.Entry[OK, V]) {
+	c.Cache.SetInvalidateCallback(func(item *ttl.Entry[OK, V]) {
 		hook(item.Key, item.Value)
 		c.config.DeleteLookups(&c.lookup, item.Value)
 	})
@@ -85,12 +85,12 @@ func (c *Cache[OK, AK, V]) GetBy(lookup string, key AK) (V, bool) {
 		var zero V
 		return zero, false
 	}
-	return c.TTLCache.Get(origKey)
+	return c.Cache.Get(origKey)
 }
 
 // Add: implements cache.Cache's Add().
 func (c *Cache[OK, AK, V]) Add(key OK, value V) (ok bool) {
-	if ok = c.TTLCache.Add(key, value); ok {
+	if ok = c.Cache.Add(key, value); ok {
 		c.config.AddLookups(&c.lookup, value)
 	}
 	return
@@ -98,7 +98,7 @@ func (c *Cache[OK, AK, V]) Add(key OK, value V) (ok bool) {
 
 // Set: implements cache.Cache's Set().
 func (c *Cache[OK, AK, V]) Set(key OK, value V) {
-	c.TTLCache.Set(key, value)
+	c.Cache.Set(key, value)
 	c.config.AddLookups(&c.lookup, value)
 }
 
@@ -108,7 +108,7 @@ func (c *Cache[OK, AK, V]) CASBy(lookup string, key AK, old, new V, cmp func(V, 
 	if !ok {
 		return false
 	}
-	return c.TTLCache.CAS(origKey, old, new, cmp)
+	return c.Cache.CAS(origKey, old, new, cmp)
 }
 
 // SwapBy performs a swap on value found at supplied lookup identifier and key.
@@ -118,7 +118,7 @@ func (c *Cache[OK, AK, V]) SwapBy(lookup string, key AK, swp V) V {
 		var zero V
 		return zero
 	}
-	return c.TTLCache.Swap(origKey, swp)
+	return c.Cache.Swap(origKey, swp)
 }
 
 // HasBy checks if a value is cached under supplied lookup identifier and key.
@@ -132,7 +132,7 @@ func (c *Cache[OK, AK, V]) InvalidateBy(lookup string, key AK) bool {
 	if !ok {
 		return false
 	}
-	c.TTLCache.Invalidate(origKey)
+	c.Cache.Invalidate(origKey)
 	return true
 }
 
