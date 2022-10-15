@@ -3,7 +3,7 @@ package cache
 import (
 	"time"
 
-	"codeberg.org/gruf/go-cache/v3/ttl"
+	ttlcache "codeberg.org/gruf/go-cache/v3/ttl"
 )
 
 // Cache represents a TTL cache with customizable callbacks, it exists here to abstract away the "unsafe" methods in the case that you do not want your own implementation atop ttl.Cache{}.
@@ -15,10 +15,10 @@ type Cache[Key comparable, Value any] interface {
 	Stop() bool
 
 	// SetEvictionCallback sets the eviction callback to the provided hook.
-	SetEvictionCallback(hook func(*ttl.Entry[Key, Value]))
+	SetEvictionCallback(hook func(*ttlcache.Entry[Key, Value]))
 
 	// SetInvalidateCallback sets the invalidate callback to the provided hook.
-	SetInvalidateCallback(hook func(*ttl.Entry[Key, Value]))
+	SetInvalidateCallback(hook func(*ttlcache.Entry[Key, Value]))
 
 	// SetTTL sets the cache item TTL. Update can be specified to force updates of existing items in the cache, this will simply add the change in TTL to their current expiry time.
 	SetTTL(ttl time.Duration, update bool)
@@ -56,12 +56,5 @@ type Cache[Key comparable, Value any] interface {
 
 // New returns a new initialized Cache with given initial length, maximum capacity and item TTL.
 func New[K comparable, V any](len, cap int, ttl time.Duration) Cache[K, V] {
-	c := newTTL[K, V]()
-	c.Init(len, cap, ttl)
-	return c
-}
-
-// newTTL returns a newly allocated ptr to ttl.Cache{}.
-func newTTL[K comparable, V any]() *ttl.Cache[K, V] {
-	return new(ttl.Cache[K, V])
+	return ttlcache.New[K, V](len, cap, ttl)
 }

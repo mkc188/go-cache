@@ -38,6 +38,13 @@ type Cache[Key comparable, Value any] struct {
 	sync.Mutex
 }
 
+// New returns a new initialized Cache with given initial length, maximum capacity and item TTL.
+func New[K comparable, V any](len, cap int, ttl time.Duration) *Cache[K, V] {
+	c := new(Cache[K, V])
+	c.Init(len, cap, ttl)
+	return c
+}
+
 // Init will initialize this cache with given initial length, maximum capacity and item TTL.
 func (c *Cache[K, V]) Init(len, cap int, ttl time.Duration) {
 	if ttl <= 0 {
