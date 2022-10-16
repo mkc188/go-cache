@@ -62,8 +62,8 @@ func (c *Cache[OK, AK, V]) SetEvictionCallback(hook func(OK, V)) {
 		hook = func(o OK, v V) {}
 	}
 	c.Cache.SetEvictionCallback(func(item *ttl.Entry[OK, V]) {
-		hook(item.Key, item.Value)
 		c.config.DeleteLookups(&c.lookup, item.Value)
+		hook(item.Key, item.Value)
 	})
 }
 
@@ -73,8 +73,8 @@ func (c *Cache[OK, AK, V]) SetInvalidateCallback(hook func(OK, V)) {
 		hook = func(o OK, v V) {}
 	}
 	c.Cache.SetInvalidateCallback(func(item *ttl.Entry[OK, V]) {
-		hook(item.Key, item.Value)
 		c.config.DeleteLookups(&c.lookup, item.Value)
+		hook(item.Key, item.Value)
 	})
 }
 
