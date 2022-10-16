@@ -328,13 +328,13 @@ func (c *Cache[K, V]) Invalidate(key K) bool {
 		return false
 	}
 
+	// Remove from cache map
+	_ = c.Cache.Delete(key)
+
 	if c.Invalid != nil {
 		// Invalidate item
 		c.Invalid(item)
 	}
-
-	// Remove from cache map
-	_ = c.Cache.Delete(key)
 
 	// Return item to pool
 	c.free(item)
