@@ -199,12 +199,14 @@ func (c *Cache[Value]) Store(value Value, store func() error) error {
 // and 'false' on any conflict. Note this function MUST be called within
 // the underlying cache's mutex lock as it makes calls to TTLCache{}.__Unsafe().
 func (c *Cache[Value]) store(r result[Value]) (string, bool) {
-	// Check for overlapy with any keys, as an
+	// Check for overlapy with any NON-ERROR keys, as an
 	// overlap will cause say one but not all of
 	// an item's keys to produce unexpected results.
 	for _, key := range r.Keys {
-		if c.cache.Cache.Has(key.value) {
-			return key.value, false
+		if entry, ok := c.cache.Cache.Get(key.value); ok {
+			if entry.Value.Error == nil {
+				return key.value, false
+			}
 		}
 	}
 
