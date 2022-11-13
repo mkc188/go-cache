@@ -231,12 +231,6 @@ func TestCache(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("placing entry failed: %v", err)
 		}
-
-		if err := c.Store(&(testEntries[i]), func() error {
-			return nil
-		}); !result.IsConflictErr(err) {
-			t.Fatalf("placing duplicate entry succeeded")
-		}
 	}
 
 	// Ensure all entries are expected
@@ -295,12 +289,6 @@ func TestCache(t *testing.T) {
 			return nil
 		}); err != nil {
 			t.Fatalf("placing entry failed: %v", err)
-		}
-
-		if err := c.Store(&(testEntries[i]), func() error {
-			return nil
-		}); !result.IsConflictErr(err) {
-			t.Fatalf("placing duplicate entry succeeded")
 		}
 	}
 
