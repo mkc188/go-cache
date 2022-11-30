@@ -160,7 +160,7 @@ func (c *Cache[Value]) Load(lookup string, load func() (Value, error), keyParts 
 		if res.Error != nil {
 			// This load returned an error, only
 			// store this item under provided key.
-			res.Keys = []cachedKey{{
+			res.Keys = []cacheKey{{
 				info: keyInfo,
 				key:  ckey,
 			}}

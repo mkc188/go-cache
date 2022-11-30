@@ -27,8 +27,8 @@ func (sk structKeys) get(name string) *structKey {
 
 // generate will calculate and produce a slice of cache keys the given value
 // can be stored under in the, as determined by receiving struct keys.
-func (sk structKeys) generate(a any) []cachedKey {
-	var keys []cachedKey
+func (sk structKeys) generate(a any) []cacheKey {
+	var keys []cacheKey
 
 	// Get reflected value in order
 	// to access the struct fields
@@ -68,7 +68,7 @@ func (sk structKeys) generate(a any) []cachedKey {
 		}
 
 		// Append new cached key to slice
-		keys = append(keys, cachedKey{
+		keys = append(keys, cacheKey{
 			info: &sk[i],
 			key:  string(buf.B), // copy
 		})
@@ -77,7 +77,7 @@ func (sk structKeys) generate(a any) []cachedKey {
 	return keys
 }
 
-type cacheKeys []cachedKey
+type cacheKeys []cacheKey
 
 // drop will drop the cachedKey with lookup name from receiving cacheKeys slice.
 func (ck *cacheKeys) drop(name string) {
@@ -90,8 +90,8 @@ func (ck *cacheKeys) drop(name string) {
 	}
 }
 
-// cachedKey represents an actual cached key.
-type cachedKey struct {
+// cacheKey represents an actual cached key.
+type cacheKey struct {
 	// info is a reference to the structKey this
 	// cacheKey is representing. This is a shared
 	// reference and as such only the structKey.pkeys
