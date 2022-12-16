@@ -43,8 +43,8 @@ func (sk structKeys) generate(a any) []cacheKey {
 	}
 
 	// Acquire byte buffer
-	buf := bufpool.Get().(*byteutil.Buffer)
-	defer bufpool.Put(buf)
+	buf := getBuf()
+	defer putBuf(buf)
 
 	for i := range sk {
 		// Reset buffer
@@ -196,9 +196,9 @@ func genKey(parts ...any) string {
 		panic("no key parts provided")
 	}
 
-	// Acquire buffer and reset
-	buf := bufpool.Get().(*byteutil.Buffer)
-	defer bufpool.Put(buf)
+	// Acquire byte buffer
+	buf := getBuf()
+	defer putBuf(buf)
 	buf.Reset()
 
 	// Encode each key part
@@ -222,8 +222,19 @@ func isExported(fnName string) bool {
 
 // bufpool provides a memory pool of byte
 // buffers use when encoding key types.
-var bufpool = sync.Pool{
+var bufPool = sync.Pool{
 	New: func() any {
 		return &byteutil.Buffer{B: make([]byte, 0, 512)}
 	},
+}
+
+func getBuf() *byteutil.Buffer {
+	return bufPool.Get().(*byteutil.Buffer)
+}
+
+func putBuf(buf *byteutil.Buffer) {
+	if buf.Cap() > int(^uint16(0)) {
+		return // drop large bufs
+	}
+	bufPool.Put(buf)
 }

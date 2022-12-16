@@ -1,10 +1,12 @@
 package result
 
 import (
+	"context"
 	"reflect"
 	"time"
 
 	"codeberg.org/gruf/go-cache/v3/ttl"
+	"codeberg.org/gruf/go-errors/v2"
 )
 
 // Lookup represents a struct object lookup method in the cache.
@@ -24,6 +26,7 @@ type Lookup struct {
 type Cache[Value any] struct {
 	cache   ttl.Cache[int64, result[Value]] // underlying result cache
 	lookups structKeys                      // pre-determined struct lookups
+	ignore  func(error) bool                // determines cacheable errors
 	copy    func(Value) Value               // copies a Value type
 	next    int64                           // update key counter
 }
@@ -58,6 +61,7 @@ func New[Value any](lookups []Lookup, copy func(Value) Value, cap int) *Cache[Va
 	c.cache.Init(0, cap, 0)
 	c.SetEvictionCallback(nil)
 	c.SetInvalidateCallback(nil)
+	c.IgnoreErrors(nil)
 	return c
 }
 
@@ -125,7 +129,23 @@ func (c *Cache[Value]) SetInvalidateCallback(hook func(Value)) {
 	})
 }
 
-// Load will attempt to load an existing result from the cacche for the given lookup and key parts, else calling the load function and caching that result.
+// IgnoreErrors allows setting a function hook to determine which error types should / not be cached.
+func (c *Cache[Value]) IgnoreErrors(ignore func(error) bool) {
+	if ignore == nil {
+		ignore = func(err error) bool {
+			return errors.Is(
+				err,
+				context.Canceled,
+				context.DeadlineExceeded,
+			)
+		}
+	}
+	c.cache.Lock()
+	c.ignore = ignore
+	c.cache.Unlock()
+}
+
+// Load will attempt to load an existing result from the cacche for the given lookup and key parts, else calling the provided load function and caching the result.
 func (c *Cache[Value]) Load(lookup string, load func() (Value, error), keyParts ...any) (Value, error) {
 	var (
 		zero Value
@@ -154,10 +174,18 @@ func (c *Cache[Value]) Load(lookup string, load func() (Value, error), keyParts 
 	c.cache.Unlock()
 
 	if !ok {
-		// Generate new result from fresh load.
-		res.Value, res.Error = load()
+		// Generate fresh result.
+		value, err := load()
 
-		if res.Error != nil {
+		if err != nil {
+			if c.ignore(err) {
+				// don't cache this error type
+				return zero, err
+			}
+
+			// Store error result.
+			res.Error = err
+
 			// This load returned an error, only
 			// store this item under provided key.
 			res.Keys = []cacheKey{{
@@ -165,6 +193,9 @@ func (c *Cache[Value]) Load(lookup string, load func() (Value, error), keyParts 
 				key:  ckey,
 			}}
 		} else {
+			// Store value result.
+			res.Value = value
+
 			// This was a successful load, generate keys.
 			res.Keys = c.lookups.generate(res.Value)
 		}
@@ -263,16 +294,6 @@ func (c *Cache[Value]) Invalidate(lookup string, keyParts ...any) {
 // Clear empties the cache, calling the invalidate callback.
 func (c *Cache[Value]) Clear() {
 	c.cache.Clear()
-}
-
-// Len returns the current length of the cache.
-func (c *Cache[Value]) Len() int {
-	return c.cache.Cache.Len()
-}
-
-// Cap returns the maximum capacity of this result cache.
-func (c *Cache[Value]) Cap() int {
-	return c.cache.Cache.Cap()
 }
 
 // store will cache this result under all of its required cache keys.

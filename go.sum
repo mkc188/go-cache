@@ -7,6 +7,8 @@ codeberg.org/gruf/go-bytes v1.0.2/go.mod h1:1v/ibfaosfXSZtRdW2rWaVrDXMc9E3bsi/M9
 codeberg.org/gruf/go-byteutil v1.0.2 h1:OesVyK5VKWeWdeDR00zRJ+Oy8hjXx1pBhn7WVvcZWVE=
 codeberg.org/gruf/go-byteutil v1.0.2/go.mod h1:cWM3tgMCroSzqoBXUXMhvxTxYJp+TbCr6ioISRY5vSU=
 codeberg.org/gruf/go-errors/v2 v2.0.0/go.mod h1:ZRhbdhvgoUA3Yw6e56kd9Ox984RrvbEFC2pOXyHDJP4=
+codeberg.org/gruf/go-errors/v2 v2.0.2 h1:T9CqfC+ntSIQL5mdQxwHlUMod1htpgNe3P1tugxKlT4=
+codeberg.org/gruf/go-errors/v2 v2.0.2/go.mod h1:6sI75OmvXE2AtRm4WUyGMEyqEOKTsfe+CA+aBXwbtJY=
 codeberg.org/gruf/go-kv v1.5.2 h1:B0RkAXLUXYn3Za1NzTXOcUvAc+JUC2ZadTMkCUDa0mc=
 codeberg.org/gruf/go-kv v1.5.2/go.mod h1:al6ASW/2CbGqz2YcM8B00tvWnVi1bU1CH3HYs5tZxo4=
 codeberg.org/gruf/go-mangler v1.1.1 h1:Ci56Le8PKrfESTNYjIZu3AoqAf/O2mX8BTWC6EuN7HA=
