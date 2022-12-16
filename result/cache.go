@@ -18,6 +18,9 @@ type Lookup struct {
 	// AllowZero indicates whether to accept and cache
 	// under zero value keys, otherwise ignore them.
 	AllowZero bool
+
+	// TODO: support toggling case sensitive lookups.
+	// CaseSensitive bool
 }
 
 // Cache provides a means of caching value structures, along with
