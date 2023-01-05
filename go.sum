@@ -15,10 +15,10 @@ codeberg.org/gruf/go-mangler v1.2.2 h1:fisdWXa6dW4p1uYdbz5Of3R4lDDFPuRqKavGI9O03
 codeberg.org/gruf/go-mangler v1.2.2/go.mod h1:X/7URkFhLBAVKkTxmqF11Oxw3A6pSSxgPeHssQaiq28=
 codeberg.org/gruf/go-maps v1.0.3 h1:VDwhnnaVNUIy5O93CvkcE2IZXnMB1+IJjzfop9V12es=
 codeberg.org/gruf/go-maps v1.0.3/go.mod h1:D5LNDxlC9rsDuVQVM6JObaVGAdHB6g2dTdOdkh1aXWA=
-codeberg.org/gruf/go-runners v1.3.0 h1:ZhJ3pFivyZgM/JfKTIc312rI/XUiIfLheDB1mFPRTEk=
-codeberg.org/gruf/go-runners v1.3.0/go.mod h1:rl0EdZNozkRMb21DAtOL5L4oTfmslYQdZgq2RMMc/H4=
-codeberg.org/gruf/go-sched v1.1.1 h1:YtLSQhpypzuD3HTup5oF7LLWB79gTL4nqW06kH4Vwks=
-codeberg.org/gruf/go-sched v1.1.1/go.mod h1:SRcdP/5qim+EBT3n3r4aUra1C30yPqV4OJOXuqvgdQM=
+codeberg.org/gruf/go-runners v1.4.0 h1:977nVjigAdH95+VAB/a6tyBJOKk99e60h+mfHzBs/n8=
+codeberg.org/gruf/go-runners v1.4.0/go.mod h1:kUM6GYL7dC+f9Sc/XuwdvB/mB4FuI4fJFb150ADMsmw=
+codeberg.org/gruf/go-sched v1.2.0 h1:utZl/7srVcbh30rFw42LC2/cMtak4UZRxtIOt/5riNA=
+codeberg.org/gruf/go-sched v1.2.0/go.mod h1:v4ueWq+fAtAw9JYt4aFXvadI1YoOqofgHQgszRYuslA=
 github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08 h1:ox2F0PSMlrAAiAdknSRMDrAr8mfxPCfSZolH+/qQnyQ=
 github.com/cornelk/hashmap v1.0.8 h1:nv0AWgw02n+iDcawr5It4CjQIAcdMMKRrs10HOJYlrc=
 github.com/cornelk/hashmap v1.0.8/go.mod h1:RfZb7JO3RviW/rT6emczVuC/oxpdz4UsSB2LJSclR1k=
