@@ -5,7 +5,7 @@ go 1.19
 require (
 	codeberg.org/gruf/go-byteutil v1.0.2
 	codeberg.org/gruf/go-errors/v2 v2.0.2
-	codeberg.org/gruf/go-mangler v1.2.2
+	codeberg.org/gruf/go-mangler v1.2.3
 	codeberg.org/gruf/go-maps v1.0.3
 	codeberg.org/gruf/go-sched v1.2.0
 	github.com/cornelk/hashmap v1.0.8

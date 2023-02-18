@@ -11,8 +11,8 @@ codeberg.org/gruf/go-errors/v2 v2.0.2 h1:T9CqfC+ntSIQL5mdQxwHlUMod1htpgNe3P1tugx
 codeberg.org/gruf/go-errors/v2 v2.0.2/go.mod h1:6sI75OmvXE2AtRm4WUyGMEyqEOKTsfe+CA+aBXwbtJY=
 codeberg.org/gruf/go-kv v1.5.2 h1:B0RkAXLUXYn3Za1NzTXOcUvAc+JUC2ZadTMkCUDa0mc=
 codeberg.org/gruf/go-kv v1.5.2/go.mod h1:al6ASW/2CbGqz2YcM8B00tvWnVi1bU1CH3HYs5tZxo4=
-codeberg.org/gruf/go-mangler v1.2.2 h1:fisdWXa6dW4p1uYdbz5Of3R4lDDFPuRqKavGI9O03Rc=
-codeberg.org/gruf/go-mangler v1.2.2/go.mod h1:X/7URkFhLBAVKkTxmqF11Oxw3A6pSSxgPeHssQaiq28=
+codeberg.org/gruf/go-mangler v1.2.3 h1:sj0dey2lF5GRQL7fXmCY0wPNaI5JrROiThb0VDbzF8A=
+codeberg.org/gruf/go-mangler v1.2.3/go.mod h1:X/7URkFhLBAVKkTxmqF11Oxw3A6pSSxgPeHssQaiq28=
 codeberg.org/gruf/go-maps v1.0.3 h1:VDwhnnaVNUIy5O93CvkcE2IZXnMB1+IJjzfop9V12es=
 codeberg.org/gruf/go-maps v1.0.3/go.mod h1:D5LNDxlC9rsDuVQVM6JObaVGAdHB6g2dTdOdkh1aXWA=
 codeberg.org/gruf/go-runners v1.4.0 h1:977nVjigAdH95+VAB/a6tyBJOKk99e60h+mfHzBs/n8=
