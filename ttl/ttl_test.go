@@ -57,8 +57,8 @@ func TestCache(t *testing.T) {
 
 	// Track callbacks set
 	callbacks := map[string]interface{}{}
-	c.SetInvalidateCallback(func(item *ttl.Entry[string, interface{}]) {
-		callbacks[item.Key] = item.Value
+	c.SetInvalidateCallback(func(key string, value interface{}) {
+		callbacks[key] = value
 	})
 
 	// Add all entries to cache
