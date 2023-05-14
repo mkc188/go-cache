@@ -174,7 +174,7 @@ func TestCache(t *testing.T) {
 		tt2 := new(testType)
 		*tt2 = *tt
 		return tt2
-	}, 100)
+	}, 3)
 	c.SetTTL(time.Second*5, false)
 	_ = c.Start(time.Second * 10)
 
