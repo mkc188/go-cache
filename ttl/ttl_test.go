@@ -113,11 +113,43 @@ func TestCache(t *testing.T) {
 
 	close(done) // stop the background loop
 	t.Log("Sleeping to give time for cache sweeps")
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 11)
 
 	// Checking cache is off expected size
 	t.Logf("Checking cache is of expected size (0)")
 	if sz := c.Len(); sz != 0 {
 		t.Fatalf("unexpected cache size: %d", sz)
+	}
+
+	// Update cache TTL time to be
+	// sometime larger than sweep time.
+	c.SetTTL(time.Second*20, false)
+
+	// Restart the cache.
+	for c.Stop() {
+	}
+	for c.Start(time.Second * 10) {
+	}
+
+	// Add all entries to cache
+	for key, val := range testEntries {
+		t.Logf("Cache.Add(%s, %v)", key, val)
+		if !c.Add(key, val) {
+			t.Fatalf("failed adding key to cache: %s", key)
+		}
+	}
+
+	t.Log("Sleeping to give time for cache sweeps")
+	time.Sleep(time.Second * 15)
+
+	// Ensure all entries remain as expected
+	for key, val := range testEntries {
+		check, ok := c.Get(key)
+		t.Logf("Cache.Get() => %s, %v", key, val)
+		if !ok {
+			t.Fatalf("key unexpectedly not found in cache: %s", key)
+		} else if !cmp.Equal(val, check) {
+			t.Fatalf("value not as expected for key in cache: %s", key)
+		}
 	}
 }
