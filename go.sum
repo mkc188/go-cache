@@ -20,8 +20,6 @@ codeberg.org/gruf/go-runners v1.4.0/go.mod h1:kUM6GYL7dC+f9Sc/XuwdvB/mB4FuI4fJFb
 codeberg.org/gruf/go-sched v1.2.0 h1:utZl/7srVcbh30rFw42LC2/cMtak4UZRxtIOt/5riNA=
 codeberg.org/gruf/go-sched v1.2.0/go.mod h1:v4ueWq+fAtAw9JYt4aFXvadI1YoOqofgHQgszRYuslA=
 github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08 h1:ox2F0PSMlrAAiAdknSRMDrAr8mfxPCfSZolH+/qQnyQ=
-github.com/cornelk/hashmap v1.0.8 h1:nv0AWgw02n+iDcawr5It4CjQIAcdMMKRrs10HOJYlrc=
-github.com/cornelk/hashmap v1.0.8/go.mod h1:RfZb7JO3RviW/rT6emczVuC/oxpdz4UsSB2LJSclR1k=
 github.com/fxamacker/cbor v1.5.1 h1:XjQWBgdmQyqimslUh5r4tUGmoqzHmBFQOImkWGi2awg=
 github.com/google/go-cmp v0.5.8 h1:e6P7q2lk1O+qJJb4BtCQXlK8vWEO8V1ZeuEdJNOqZyg=
 github.com/google/go-cmp v0.5.8/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=

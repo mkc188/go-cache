@@ -175,8 +175,6 @@ func TestCache(t *testing.T) {
 		*tt2 = *tt
 		return tt2
 	}, 3)
-	c.SetTTL(time.Second*5, false)
-	_ = c.Start(time.Second * 10)
 
 	done := make(chan struct{})
 	go func() {
@@ -291,19 +289,4 @@ func TestCache(t *testing.T) {
 			t.Fatalf("placing entry failed: %v", err)
 		}
 	}
-
-	t.Log("Sleeping to give time for cache sweeps")
-	time.Sleep(time.Second * 10)
-
-	// Check callbacks for evicted entries
-	for _, entry := range testEntries {
-		lookup := testLookups[0].Lookup
-		key := testLookups[0].Fields(entry)
-		if !findInCallbacks(callbacks, entry) {
-			t.Errorf("evict callback unexpectedly not called for: %s,%v", lookup.Name, key)
-		}
-	}
-
-	t.Log("Giving further time for empty cache sweep")
-	time.Sleep(time.Second * 10)
 }
