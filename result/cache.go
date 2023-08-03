@@ -2,6 +2,8 @@ package result
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"reflect"
 	_ "unsafe"
 
@@ -18,6 +20,15 @@ type result struct {
 
 	// cached error
 	Error error
+}
+
+// getResultValue is a safe way of casting and fetching result value.
+func getResultValue[T any](res *result) T {
+	v, ok := res.Value.(T)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "!! BUG: unexpected value type in result: %T\n", res.Value)
+	}
+	return v
 }
 
 // Lookup represents a struct object lookup method in the cache.
@@ -101,8 +112,8 @@ func (c *Cache[T]) SetEvictionCallback(hook func(T)) {
 			return
 		}
 
-		// Free and call hook.
-		v := res.Value.(T)
+		// Free result and call hook.
+		v := getResultValue[T](res)
 		putResult(res)
 		hook(v)
 	})
@@ -129,8 +140,8 @@ func (c *Cache[T]) SetInvalidateCallback(hook func(T)) {
 			return
 		}
 
-		// Free and call hook.
-		v := res.Value.(T)
+		// Free result and call hook.
+		v := getResultValue[T](res)
 		putResult(res)
 		hook(v)
 	})
@@ -247,7 +258,7 @@ func (c *Cache[T]) Load(lookup string, load func() (T, error), keyParts ...any) 
 	}
 
 	// Return a copy of value from cache
-	return c.copy(res.Value.(T)), nil
+	return c.copy(getResultValue[T](res)), nil
 }
 
 // Store will call the given store function, and on success store the value in the cache as a positive result.
