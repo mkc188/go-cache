@@ -412,8 +412,5 @@ func (c *Cache[T]) store(res *result) (evict func()) {
 	return func() {
 		// Call user evict hook.
 		c.cache.Evict(evk, evr)
-
-		// Release result.
-		putResult(evr)
 	}
 }
