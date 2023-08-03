@@ -111,7 +111,7 @@ func (c *Cache[T]) SetEvictionCallback(hook func(T)) {
 		c.cache.Unlock()
 
 		if res.Error != nil {
-			// Skip error hooks
+			// Skip value hooks
 			return
 		}
 
@@ -139,7 +139,7 @@ func (c *Cache[T]) SetInvalidateCallback(hook func(T)) {
 		c.cache.Unlock()
 
 		if res.Error != nil {
-			// Skip error hooks
+			// Skip value hooks
 			return
 		}
 
