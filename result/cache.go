@@ -393,8 +393,8 @@ func (c *Cache[T]) store(res *result) (evict func()) {
 					// this value, so we drop its primary key too.
 					c.cache.Cache.Delete(conflict)
 
-					// Done with result.
-					putResult(confRes)
+					// Add finished result to evict queue.
+					toEvict = append(toEvict, confRes)
 				}
 			}
 
