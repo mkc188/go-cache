@@ -132,11 +132,8 @@ func (c *Cache[T]) SetInvalidateCallback(hook func(T)) {
 func (c *Cache[T]) IgnoreErrors(ignore func(error) bool) {
 	if ignore == nil {
 		ignore = func(err error) bool {
-			return errors.Comparable(
-				err,
-				context.Canceled,
-				context.DeadlineExceeded,
-			)
+			return errors.Is(err, context.Canceled) ||
+				errors.Is(err, context.DeadlineExceeded)
 		}
 	}
 	c.cache.Lock()
