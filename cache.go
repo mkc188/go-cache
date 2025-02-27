@@ -5,6 +5,7 @@ import (
 
 	"codeberg.org/gruf/go-cache/v3/simple"
 	"codeberg.org/gruf/go-cache/v3/ttl"
+	"codeberg.org/gruf/go-cache/v3/redis"
 )
 
 // TTLCache represents a TTL cache with customizable callbacks, it exists here to abstract away the "unsafe" methods in the case that you do not want your own implementation atop ttl.Cache{}.
@@ -72,4 +73,12 @@ func New[K comparable, V any](len, cap int) Cache[K, V] {
 // NewTTL returns a new initialized TTLCache with given initial length, maximum capacity and TTL duration.
 func NewTTL[K comparable, V any](len, cap int, _ttl time.Duration) TTLCache[K, V] {
 	return ttl.New[K, V](len, cap, _ttl)
+}
+
+func NewRedis[K comparable, V any](opts *redis.Options) Cache[K, V] {
+    return redis.New[K, V](opts)
+}
+
+func NewRedisTTL[K comparable, V any](opts *redis.Options) TTLCache[K, V] {
+    return redis.NewTTL[K, V](opts)
 }
