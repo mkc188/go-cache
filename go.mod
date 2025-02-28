@@ -1,4 +1,4 @@
-module codeberg.org/gruf/go-cache/v3
+module github.com/mkc188/go-cache/v3
 
 go 1.20
 

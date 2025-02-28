@@ -7,7 +7,7 @@ import (
 	"time"
 	"unsafe"
 
-	"codeberg.org/gruf/go-cache/v3/ttl"
+	"github.com/mkc188/go-cache/v3/ttl"
 	"github.com/google/go-cmp/cmp"
 )
 

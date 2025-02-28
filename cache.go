@@ -3,9 +3,9 @@ package cache
 import (
 	"time"
 
-	"codeberg.org/gruf/go-cache/v3/simple"
-	"codeberg.org/gruf/go-cache/v3/ttl"
-	"codeberg.org/gruf/go-cache/v3/redis"
+	"github.com/mkc188/go-cache/v3/simple"
+	"github.com/mkc188/go-cache/v3/ttl"
+	"github.com/mkc188/go-cache/v3/redis"
 )
 
 // TTLCache represents a TTL cache with customizable callbacks, it exists here to abstract away the "unsafe" methods in the case that you do not want your own implementation atop ttl.Cache{}.
