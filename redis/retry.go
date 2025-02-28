@@ -48,8 +48,7 @@ func isRetryableError(err error) bool {
 
     // Redis specific retryable errors
     switch err {
-    case redis.ErrClosed, 
-         redis.ErrPoolTimeout,
+    case redis.ErrClosed,
          context.DeadlineExceeded,
          context.Canceled:
         return true

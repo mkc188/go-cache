@@ -300,7 +300,7 @@ func (c *Cache[K, V]) formatKey(key K) string {
 
 // Transaction support
 
-func (c *Cache[K, V]) WithTx(ctx context.Context, fn func(redis.Pipeliner) error) error {
+func (c *Cache[K, V]) WithTx(ctx context.Context, fn func(*redis.Tx) error) error {
     return c.withRetry(ctx, func(ctx context.Context) error {
         return c.pool.Client().Watch(ctx, fn)
     })
